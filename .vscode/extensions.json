@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "aaron-bond.better-comments",
+    "wmaurer.change-case",
+    "oouo-diogo-perdigao.docthis",
+    "dbaeumer.vscode-eslint",
+    "abhijoybasak.nestjs-files",
+    "christian-kohler.path-intellisense",
+    "42crunch.vscode-openapi",
+    "esbenp.prettier-vscode",
+    "wayou.vscode-todo-highlight",
+    "ashinzekene.nestjs",
+    "deerawan.vscode-faker"
+  ]
+}

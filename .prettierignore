@@ -1,0 +1,15 @@
+.gitignore
+*.sh
+*.crt
+.prettierignore
+.husky/*
+Dockerfile
+.dockerignore
+bun.lock
+coverage/**
+documentation/
+static/
+.env.example
+.editorconfig
+.gitkeep
+*.stub

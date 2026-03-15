@@ -1,0 +1,18 @@
+import type { Kysely } from 'kysely';
+
+import type { DB } from '../schema/db';
+import { runSeed } from '../utils';
+
+const SEED_NAME = ''; // seed name
+
+export async function seed(db: Kysely<DB>): Promise<void> {
+  await runSeed({ db, seedName: SEED_NAME, dev, prod });
+}
+
+const dev = async (db: Kysely<DB>): Promise<void> => {
+  // dev seed code
+};
+
+const prod = async (db: Kysely<DB>): Promise<void> => {
+  // prod seed code
+};

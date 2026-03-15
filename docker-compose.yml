@@ -1,0 +1,49 @@
+services:
+  prestart:
+    build:
+      context: .
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db/neuraflow-backend
+    command: pnpm prestart
+  app:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db/neuraflow-backend
+      API_PORT: 4000
+    restart: unless-stopped
+    ports:
+      - 4000:4000
+      - 5000:5000
+      - 5001:5001
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      prestart:
+        condition: service_completed_successfully
+
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=neuraflow-backend
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d neuraflow-backend']
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql
+
+volumes:
+  pgdata:
