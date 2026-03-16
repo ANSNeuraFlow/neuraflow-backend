@@ -6,6 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { AllExceptionsFilter } from 'common/filters/all-exception.filter';
 import type { AppConfig } from 'config/configuration';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { rawBodyMiddleware } from 'middleware';
 import { Logger } from 'nestjs-pino';
@@ -20,6 +21,8 @@ async function bootstrap() {
     bufferLogs: true,
     snapshot: true,
   });
+
+  app.use(cookieParser());
 
   const configService = app.get(ConfigService<AppConfig, true>);
   const apiPort = configService.get<number>('apiPort');

@@ -402,3 +402,9 @@ Temporary Items
 dist
 .webpack
 .serverless/**/*.zip
+
+# Http requests
+example.http
+
+# pnpm
+.pnpm-store
