@@ -6,6 +6,8 @@ export interface AppConfig {
   logger: LoggerConfig;
   isDevEnv: boolean;
   corsMaxAge: number;
+  jweSecret: string;
+  jwtExpiresIn: string;
 }
 
 export interface DatabaseConfig {
@@ -35,6 +37,8 @@ export default (): AppConfig => {
     LOGGER_FORMAT: str({ choices: ['json', 'pretty'], default: 'json' }),
     CORS_MAX_AGE: num({ default: 86400 }),
     CONTROLLER_COMMUNICATION_DEFAULT_RESPONSE_TIMEOUT_MS: num({ default: 5000 }),
+    JWE_SECRET: str(),
+    JWT_EXPIRES_IN: str({ default: '24h' }),
   });
 
   const config: AppConfig = {
@@ -49,6 +53,8 @@ export default (): AppConfig => {
     },
     isDevEnv: env.isDev,
     corsMaxAge: env.CORS_MAX_AGE,
+    jweSecret: env.JWE_SECRET,
+    jwtExpiresIn: env.JWT_EXPIRES_IN ?? '24h',
   };
 
   return config;
