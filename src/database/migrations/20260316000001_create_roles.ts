@@ -9,11 +9,6 @@ export async function up(db: Kysely<DB>): Promise<void> {
     .addColumn('name', 'varchar(64)', (col) => col.notNull().unique())
     .addColumn('created_at', 'timestamptz', (col) => col.notNull().defaultTo(sql`now()`))
     .execute();
-
-  // await db.insertInto('roles').values([
-  //     { name: 'admin' },
-  //     { name: 'user' },
-  // ]).execute();
 }
 
 export async function down(db: Kysely<DB>): Promise<void> {

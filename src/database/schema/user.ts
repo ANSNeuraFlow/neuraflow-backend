@@ -3,7 +3,7 @@ import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
 import type { CreatedAt, OptionalAt, UpdatedAt } from './common';
 
 export interface UserTable {
-  id: Generated<number>;
+  id: Generated<string>;
   email: string;
   password: string;
   firstName: string;
