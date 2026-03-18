@@ -73,5 +73,27 @@ const dev = async (db: Kysely<DB>): Promise<void> => {
 };
 
 const prod = async (db: Kysely<DB>): Promise<void> => {
-  await seedRolesAndPermissions(db);
+  const adminRoleId = await seedRolesAndPermissions(db);
+
+  const adminEmail = 'admin@neuraflow.com';
+  const hashedPassword = await bcrypt.hash('StartoweHaslo123!', 10);
+
+  await db
+    .insertInto('users')
+    .values({
+      id: uuidv7(),
+      email: adminEmail,
+      password: hashedPassword,
+      firstName: 'Admin',
+      lastName: 'System',
+      isVerified: true,
+      roleId: adminRoleId,
+      isPasswordChangeRequired: true,
+    })
+    .onConflict((oc) =>
+      oc.column('email').doUpdateSet({
+        isPasswordChangeRequired: true,
+      }),
+    )
+    .execute();
 };

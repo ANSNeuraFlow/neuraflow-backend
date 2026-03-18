@@ -13,7 +13,14 @@ export class AuthRepositoryService {
     return this.db
       .selectFrom('users')
       .leftJoin('roles', 'users.roleId', 'roles.id')
-      .select(['users.id', 'users.email', 'users.password', 'users.isVerified', 'roles.name as role'])
+      .select([
+        'users.id',
+        'users.email',
+        'users.password',
+        'users.isVerified',
+        'users.isPasswordChangeRequired',
+        'roles.name as role',
+      ])
       .where('users.email', '=', email)
       .executeTakeFirst();
   }
@@ -22,7 +29,7 @@ export class AuthRepositoryService {
     return this.db.selectFrom('users').select(['id']).where('email', '=', email).executeTakeFirst();
   }
 
-  async createUser(dto: RegisterDto, hashedPassword: string) {
+  async createUser(dto: RegisterDto, hashedPassword: string, requirePasswordChange = true) {
     const { email, firstName, lastName } = dto;
     return this.db
       .insertInto('users')
@@ -33,8 +40,9 @@ export class AuthRepositoryService {
         firstName,
         lastName,
         isVerified: false,
+        isPasswordChangeRequired: requirePasswordChange,
       })
-      .returning(['id', 'email', 'isVerified'])
+      .returning(['id', 'email', 'isVerified', 'isPasswordChangeRequired'])
       .executeTakeFirstOrThrow();
   }
 
@@ -60,5 +68,16 @@ export class AuthRepositoryService {
       .execute();
 
     return permissions.map((p) => p.name);
+  }
+
+  async updatePasswordAndRemoveChangeFlag(userId: string, hashedNewPassword: string) {
+    return this.db
+      .updateTable('users')
+      .set({
+        password: hashedNewPassword,
+        isPasswordChangeRequired: false,
+      })
+      .where('id', '=', userId)
+      .execute();
   }
 }
