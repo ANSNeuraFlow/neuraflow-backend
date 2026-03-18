@@ -8,6 +8,7 @@ export interface AppConfig {
   corsMaxAge: number;
   jweSecret: string;
   jwtExpiresIn: string;
+  authTokenExpirationHours: number;
 }
 
 export interface DatabaseConfig {
@@ -39,6 +40,7 @@ export default (): AppConfig => {
     CONTROLLER_COMMUNICATION_DEFAULT_RESPONSE_TIMEOUT_MS: num({ default: 5000 }),
     JWE_SECRET: str(),
     JWT_EXPIRES_IN: str({ default: '24h' }),
+    AUTH_TOKEN_EXPIRATION_HOURS: num({ default: 24 }),
   });
 
   const config: AppConfig = {
@@ -55,6 +57,7 @@ export default (): AppConfig => {
     corsMaxAge: env.CORS_MAX_AGE,
     jweSecret: env.JWE_SECRET,
     jwtExpiresIn: env.JWT_EXPIRES_IN ?? '24h',
+    authTokenExpirationHours: env.AUTH_TOKEN_EXPIRATION_HOURS,
   };
 
   return config;
