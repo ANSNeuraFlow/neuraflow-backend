@@ -16,8 +16,6 @@ import type { RegisterDto } from 'modules/auth/dtos/register.dto';
 import { JweService } from './jwe.service';
 import { AuthRepository } from './repository/auth.repository';
 
-// const TOKEN_HOURS = 24;
-
 @Injectable()
 export class AuthService {
   constructor(
