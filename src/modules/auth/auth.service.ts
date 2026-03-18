@@ -5,22 +5,25 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import bcrypt from 'bcrypt';
+import { AppConfig } from 'config/configuration';
 import type { Response } from 'express';
 import type { ForceChangePasswordDto } from 'modules/auth/dtos/force-change-password.dto';
 import type { LoginDto } from 'modules/auth/dtos/login.dto';
 import type { RegisterDto } from 'modules/auth/dtos/register.dto';
 
-import { AuthRepositoryService } from './auth-repository.service';
 import { JweService } from './jwe.service';
+import { AuthRepository } from './repository/auth.repository';
 
-const TOKEN_HOURS = 24;
+// const TOKEN_HOURS = 24;
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly authRepositoryService: AuthRepositoryService,
+    private readonly authRepositoryService: AuthRepository,
     private readonly jweService: JweService,
+    private readonly configService: ConfigService<AppConfig>,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -28,7 +31,7 @@ export class AuthService {
 
     const existing = await this.authRepositoryService.checkUserExists(dto.email);
 
-    if (existing) {
+    if (existing !== undefined && existing !== null) {
       throw new ConflictException('A user with this email already exists');
     }
 
@@ -48,11 +51,11 @@ export class AuthService {
 
     const user = await this.authRepositoryService.getUserByEmail(email);
 
-    if (!user) {
+    if (user === null || user === undefined) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const passwordMatch = await bcrypt.compare(password, user.password as string);
     if (!passwordMatch) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -72,7 +75,8 @@ export class AuthService {
       role: user.role,
     });
 
-    const maxAgeMs = TOKEN_HOURS * 60 * 60 * 1000;
+    const tokenHours = this.configService.get<number>('authTokenExpirationHours') ?? 24;
+    const maxAgeMs = tokenHours * 60 * 60 * 1000;
 
     res.cookie('access_token', token, {
       httpOnly: true,
@@ -98,11 +102,11 @@ export class AuthService {
 
     const user = await this.authRepositoryService.getUserByEmail(email);
 
-    if (!user) {
+    if (user === null || user === undefined) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const passwordMatch = await bcrypt.compare(temporaryPassword, user.password);
+    const passwordMatch = await bcrypt.compare(temporaryPassword, user.password as string);
     if (!passwordMatch) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -121,7 +125,8 @@ export class AuthService {
       role: user.role,
     });
 
-    const maxAgeMs = TOKEN_HOURS * 60 * 60 * 1000;
+    const tokenHours = this.configService.get<number>('authTokenExpirationHours') ?? 24;
+    const maxAgeMs = tokenHours * 60 * 60 * 1000;
     res.cookie('access_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -143,7 +148,7 @@ export class AuthService {
   async getMe(userId: string) {
     const user = await this.authRepositoryService.getUserById(userId);
 
-    if (!user) {
+    if (user === null || user === undefined) {
       throw new NotFoundException('User not found');
     }
 
