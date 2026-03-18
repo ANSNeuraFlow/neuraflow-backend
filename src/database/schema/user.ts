@@ -9,6 +9,7 @@ export interface UserTable {
   firstName: string;
   lastName: string;
   isVerified: Generated<boolean>;
+  isPasswordChangeRequired: Generated<boolean>;
   roleId: number | null;
   lastLogin: OptionalAt;
   createdAt: CreatedAt;

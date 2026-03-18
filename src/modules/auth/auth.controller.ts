@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards 
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from 'common/decorators/public.decorator';
 import type { Request, Response } from 'express';
+import { ForceChangePasswordDto } from 'modules/auth/dtos/force-change-password.dto';
 import { LoginDto } from 'modules/auth/dtos/login.dto';
 import { RegisterDto } from 'modules/auth/dtos/register.dto';
 
@@ -38,5 +39,13 @@ export class AuthController {
   @ApiOperation({ summary: 'Get the currently authenticated user' })
   async me(@Req() req: Request & { user: { id: string } }) {
     return this.authService.getMe(req.user.id);
+  }
+
+  @Public()
+  @Post('force-change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Force password change on first login' })
+  async forceChangePassword(@Body() dto: ForceChangePasswordDto, @Res({ passthrough: true }) res: Response) {
+    return this.authService.forceChangePassword(dto, res);
   }
 }

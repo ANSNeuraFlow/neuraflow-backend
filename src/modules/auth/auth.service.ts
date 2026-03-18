@@ -1,6 +1,13 @@
-import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import bcrypt from 'bcrypt';
 import type { Response } from 'express';
+import type { ForceChangePasswordDto } from 'modules/auth/dtos/force-change-password.dto';
 import type { LoginDto } from 'modules/auth/dtos/login.dto';
 import type { RegisterDto } from 'modules/auth/dtos/register.dto';
 
@@ -28,7 +35,12 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await this.authRepositoryService.createUser(dto, hashedPassword);
 
-    return { id: user.id, email: user.email, isVerified: user.isVerified };
+    return {
+      id: user.id,
+      email: user.email,
+      isVerified: user.isVerified,
+      isPasswordChangeRequired: user.isPasswordChangeRequired,
+    };
   }
 
   async login(dto: LoginDto, res: Response) {
@@ -43,6 +55,13 @@ export class AuthService {
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (user.isPasswordChangeRequired) {
+      return {
+        message: 'PASSWORD_CHANGE_REQUIRED',
+        email: user.email,
+      };
     }
 
     await this.authRepositoryService.updateLastLogin(user.id);
@@ -69,6 +88,54 @@ export class AuthService {
         email: user.email,
         role: user.role,
         isVerified: user.isVerified,
+        isPasswordChangeRequired: user.isPasswordChangeRequired,
+      },
+    };
+  }
+
+  async forceChangePassword(dto: ForceChangePasswordDto, res: Response) {
+    const { email, temporaryPassword, newPassword } = dto;
+
+    const user = await this.authRepositoryService.getUserByEmail(email);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const passwordMatch = await bcrypt.compare(temporaryPassword, user.password);
+    if (!passwordMatch) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.isPasswordChangeRequired) {
+      throw new BadRequestException('Password change is not required for this account');
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await this.authRepositoryService.updatePasswordAndRemoveChangeFlag(user.id, hashedNewPassword);
+    await this.authRepositoryService.updateLastLogin(user.id);
+
+    const token = await this.jweService.issueToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    const maxAgeMs = TOKEN_HOURS * 60 * 60 * 1000;
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: maxAgeMs,
+    });
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        isPasswordChangeRequired: false,
       },
     };
   }
