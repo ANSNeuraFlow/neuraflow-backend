@@ -29,21 +29,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Log in a user' })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.login(dto);
-    res.cookie('access_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: result.maxAgeMs,
-    });
-    return { token: result.token, user: result.user };
+    return this.authService.login(dto, res);
   }
 
   @UseGuards(AuthGuard)
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get the currently authenticated user' })
-  async me(@Req() req: Request & { user: { id: number } }) {
+  async me(@Req() req: Request & { user: { id: string } }) {
     return this.authService.getMe(req.user.id);
   }
 }

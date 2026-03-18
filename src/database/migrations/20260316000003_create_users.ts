@@ -1,11 +1,12 @@
 import { type Kysely, sql } from 'kysely';
 
 import type { DB } from '../schema/db';
+import { addUpdatedAtTrigger, removeUpdatedAtTrigger } from '../utils';
 
 export async function up(db: Kysely<DB>): Promise<void> {
   await db.schema
     .createTable('users')
-    .addColumn('id', 'bigserial', (col) => col.primaryKey())
+    .addColumn('id', 'uuid', (col) => col.primaryKey().notNull())
     .addColumn('email', 'varchar(255)', (col) => col.notNull().unique())
     .addColumn('password', 'varchar(255)', (col) => col.notNull())
     .addColumn('first_name', 'varchar(128)', (col) => col.notNull())
@@ -16,8 +17,11 @@ export async function up(db: Kysely<DB>): Promise<void> {
     .addColumn('created_at', 'timestamptz', (col) => col.notNull().defaultTo(sql`now()`))
     .addColumn('updated_at', 'timestamptz', (col) => col.notNull().defaultTo(sql`now()`))
     .execute();
+
+  await addUpdatedAtTrigger(db, 'users');
 }
 
 export async function down(db: Kysely<DB>): Promise<void> {
+  await removeUpdatedAtTrigger(db, 'users');
   await db.schema.dropTable('users').execute();
 }
