@@ -5,6 +5,7 @@ import { LoggerModule } from 'nestjs-pino';
 
 import configuration, { AppConfig, LoggerConfig, LoggerFormat } from './config/configuration';
 import { DatabaseModule } from './database/database.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 
@@ -43,6 +44,7 @@ import { HealthModule } from './modules/health/health.module';
     // Http modules
     HealthModule,
     AuthModule,
+    AdminModule,
   ],
   providers: [Logger],
 })
