@@ -14,11 +14,14 @@ export async function seed(db: Kysely<DB>): Promise<void> {
 async function seedRolesAndPermissions(db: Kysely<DB>) {
   await db
     .insertInto('roles')
-    .values([{ name: 'ADMIN' }, { name: 'USER' }])
-    .onConflict((oc) => oc.column('name').doNothing())
+    .values([
+      { id: 1, name: 'ADMIN' },
+      { id: 2, name: 'USER' },
+    ])
+    .onConflict((oc) => oc.column('id').doNothing())
     .execute();
 
-  const adminRole = await db.selectFrom('roles').select('id').where('name', '=', 'ADMIN').executeTakeFirstOrThrow();
+  const adminRole = await db.selectFrom('roles').select(['id']).where('id', '=', 1).executeTakeFirstOrThrow();
 
   const permissionsList = [
     { name: 'users:read' },

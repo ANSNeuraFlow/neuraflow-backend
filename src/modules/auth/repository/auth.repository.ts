@@ -39,7 +39,7 @@ export class AuthRepository {
     return this.db.selectFrom('users').select(['id']).where('email', '=', email).executeTakeFirst();
   }
 
-  async createUser(dto: RegisterDto, hashedPassword: string): Promise<UserModel> {
+  async createUser(dto: RegisterDto, hashedPassword: string, roleId: number | null): Promise<UserModel> {
     const result = await this.db
       .insertInto('users')
       .values({
@@ -50,6 +50,7 @@ export class AuthRepository {
         lastName: dto.lastName,
         isVerified: false,
         isPasswordChangeRequired: false,
+        roleId,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -90,5 +91,8 @@ export class AuthRepository {
       })
       .where('id', '=', userId)
       .execute();
+  }
+  async getRoleByName(name: string) {
+    return this.db.selectFrom('roles').select(['id', 'name']).where('name', '=', name).executeTakeFirst();
   }
 }

@@ -25,17 +25,13 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const { password } = dto;
-
     const existing = await this.authRepositoryService.checkUserExists(dto.email);
-
     if (existing !== undefined && existing !== null) {
       throw new ConflictException('A user with this email already exists');
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await this.authRepositoryService.createUser(dto, hashedPassword);
-
+    const userRole = await this.authRepositoryService.getRoleByName('USER'); // ← nowe
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const user = await this.authRepositoryService.createUser(dto, hashedPassword, userRole?.id ?? null); // ← nowe
     return {
       id: user.id,
       email: user.email,
