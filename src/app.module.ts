@@ -1,12 +1,14 @@
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
+import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
 
 import configuration, { AppConfig, LoggerConfig, LoggerFormat } from './config/configuration';
 import { DatabaseModule } from './database/database.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ClusterModule } from './modules/cluster/cluster.module';
 import { HealthModule } from './modules/health/health.module';
 
 @Module({
@@ -41,10 +43,11 @@ import { HealthModule } from './modules/health/health.module';
     }),
     DatabaseModule,
 
-    // Http modules
+    ScheduleModule.forRoot(),
     HealthModule,
     AuthModule,
     AdminModule,
+    ClusterModule,
   ],
   providers: [Logger],
 })

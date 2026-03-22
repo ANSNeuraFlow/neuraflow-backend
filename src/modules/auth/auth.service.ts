@@ -29,9 +29,9 @@ export class AuthService {
     if (existing !== undefined && existing !== null) {
       throw new ConflictException('A user with this email already exists');
     }
-    const userRole = await this.authRepositoryService.getRoleByName('USER'); // ← nowe
+    const userRole = await this.authRepositoryService.getRoleByName('USER');
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.authRepositoryService.createUser(dto, hashedPassword, userRole?.id ?? null); // ← nowe
+    const user = await this.authRepositoryService.createUser(dto, hashedPassword, userRole?.id ?? null);
     return {
       id: user.id,
       email: user.email,
