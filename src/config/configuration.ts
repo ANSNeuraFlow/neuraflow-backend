@@ -9,6 +9,12 @@ export interface AppConfig {
   jweSecret: string;
   jwtExpiresIn: string;
   authTokenExpirationHours: number;
+  prometheus: PrometheusConfig;
+}
+
+export interface PrometheusConfig {
+  url: string;
+  timeoutMs: number;
 }
 
 export interface DatabaseConfig {
@@ -41,6 +47,8 @@ export default (): AppConfig => {
     JWE_SECRET: str(),
     JWT_EXPIRES_IN: str({ default: '24h' }),
     AUTH_TOKEN_EXPIRATION_HOURS: num({ default: 24 }),
+    PROMETHEUS_URL: url({ default: 'http://10.200.40.10:9090' }),
+    PROMETHEUS_TIMEOUT_MS: num({ default: 4000 }),
   });
 
   const config: AppConfig = {
@@ -58,6 +66,10 @@ export default (): AppConfig => {
     jweSecret: env.JWE_SECRET,
     jwtExpiresIn: env.JWT_EXPIRES_IN ?? '24h',
     authTokenExpirationHours: env.AUTH_TOKEN_EXPIRATION_HOURS,
+    prometheus: {
+      url: env.PROMETHEUS_URL,
+      timeoutMs: env.PROMETHEUS_TIMEOUT_MS,
+    },
   };
 
   return config;

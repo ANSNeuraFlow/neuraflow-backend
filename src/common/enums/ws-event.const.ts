@@ -1,5 +1,6 @@
 export const WS_EVENT = {
   EXCEPTION: 'exception',
+  CLUSTER_METRICS_UPDATE: 'cluster:metrics_update',
 } as const;
 
 export const WS_EVENTS = Object.values(WS_EVENT);
