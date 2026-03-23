@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClusterModule } from './modules/cluster/cluster.module';
+import { EegStreamModule } from './modules/eeg-stream/eeg-stream.module';
 import { HealthModule } from './modules/health/health.module';
 
 @Module({
@@ -48,6 +49,7 @@ import { HealthModule } from './modules/health/health.module';
     AuthModule,
     AdminModule,
     ClusterModule,
+    EegStreamModule,
   ],
   providers: [Logger],
 })
