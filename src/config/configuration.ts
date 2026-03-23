@@ -10,11 +10,17 @@ export interface AppConfig {
   jwtExpiresIn: string;
   authTokenExpirationHours: number;
   prometheus: PrometheusConfig;
+  kafka: KafkaConfig;
 }
 
 export interface PrometheusConfig {
   url: string;
   timeoutMs: number;
+}
+
+export interface KafkaConfig {
+  brokers: string[];
+  eegTopic: string;
 }
 
 export interface DatabaseConfig {
@@ -49,6 +55,8 @@ export default (): AppConfig => {
     AUTH_TOKEN_EXPIRATION_HOURS: num({ default: 24 }),
     PROMETHEUS_URL: url({ default: 'http://10.200.40.10:9090' }),
     PROMETHEUS_TIMEOUT_MS: num({ default: 4000 }),
+    KAFKA_BROKERS: str({ default: '10.200.40.10:9092' }),
+    KAFKA_EEG_TOPIC: str({ default: 'eeg_data' }),
   });
 
   const config: AppConfig = {
@@ -69,6 +77,10 @@ export default (): AppConfig => {
     prometheus: {
       url: env.PROMETHEUS_URL,
       timeoutMs: env.PROMETHEUS_TIMEOUT_MS,
+    },
+    kafka: {
+      brokers: env.KAFKA_BROKERS.split(','),
+      eegTopic: env.KAFKA_EEG_TOPIC,
     },
   };
 

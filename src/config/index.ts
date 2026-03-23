@@ -1,1 +1,7 @@
-export { type AppConfig, type DatabaseConfig, type LoggerConfig, LoggerFormat } from './configuration';
+export {
+  type AppConfig,
+  type DatabaseConfig,
+  type KafkaConfig,
+  type LoggerConfig,
+  LoggerFormat,
+} from './configuration';
