@@ -1,6 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientKafka } from '@nestjs/microservices';
+import type { EegMarker } from 'common/enums';
 import type { AppConfig } from 'config/configuration';
 
 import type { EegPayloadDto } from './dtos/eeg-payload.dto';
@@ -17,6 +18,7 @@ export interface EegKafkaMessage {
   ch6: number;
   ch7: number;
   ch8: number;
+  marker?: EegMarker;
 }
 
 @Injectable()
