@@ -1,3 +1,4 @@
+import type { EegSessionTable } from './eeg-session';
 import type { PermissionTable, RolePermissionTable } from './permission';
 import type { RoleTable } from './role';
 import type { SeedHistoryTable } from './seed';
@@ -9,4 +10,5 @@ export interface DB {
   permissions: PermissionTable;
   rolePermissions: RolePermissionTable;
   users: UserTable;
+  eegSessions: EegSessionTable;
 }

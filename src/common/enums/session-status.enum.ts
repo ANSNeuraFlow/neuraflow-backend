@@ -1,0 +1,6 @@
+export enum SessionStatus {
+  INITIALIZED = 'INITIALIZED',
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+}

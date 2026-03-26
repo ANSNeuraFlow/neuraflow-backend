@@ -1,6 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNumber } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional } from 'class-validator';
+import { EegMarker } from 'common/enums';
 
 export class EegPayloadDto {
   @ApiProperty({ example: 1711234567890 })
@@ -47,4 +48,13 @@ export class EegPayloadDto {
   @IsNumber()
   @Type(() => Number)
   ch8!: number;
+
+  @ApiPropertyOptional({
+    description: 'Etykieta intencji (marker klasy) dołączona do pakietu EEG',
+    enum: EegMarker,
+    example: EegMarker.LEFT_HAND,
+  })
+  @IsOptional()
+  @IsEnum(EegMarker)
+  marker?: EegMarker;
 }
