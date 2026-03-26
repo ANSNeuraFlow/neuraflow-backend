@@ -28,7 +28,7 @@ import { EegWsAuthGuard } from './gateway/eeg-ws-auth.guard';
               client: {
                 clientId: 'neuraflow-eeg-producer',
                 brokers: kafkaConfig.brokers,
-                logLevel: logLevel.NOTHING,
+                logLevel: process.env.NODE_ENV === 'production' ? logLevel.ERROR : logLevel.INFO,
               },
               producer: {
                 allowAutoTopicCreation: false,
