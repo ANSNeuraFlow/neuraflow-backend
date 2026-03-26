@@ -10,42 +10,66 @@ export class EegPayloadDto {
   timestamp!: number;
 
   @ApiProperty({ example: 0.00123 })
-  @IsNumber()
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+  })
   @Type(() => Number)
   ch1!: number;
 
   @ApiProperty({ example: 0.00456 })
-  @IsNumber()
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+  })
   @Type(() => Number)
   ch2!: number;
 
   @ApiProperty({ example: 0.00789 })
-  @IsNumber()
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+  })
   @Type(() => Number)
   ch3!: number;
 
   @ApiProperty({ example: 0.00321 })
-  @IsNumber()
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+  })
   @Type(() => Number)
   ch4!: number;
 
   @ApiProperty({ example: 0.00654 })
-  @IsNumber()
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+  })
   @Type(() => Number)
   ch5!: number;
 
   @ApiProperty({ example: 0.00987 })
-  @IsNumber()
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+  })
   @Type(() => Number)
   ch6!: number;
 
   @ApiProperty({ example: 0.00111 })
-  @IsNumber()
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+  })
   @Type(() => Number)
   ch7!: number;
 
   @ApiProperty({ example: 0.00222 })
-  @IsNumber()
+  @IsNumber({
+    allowNaN: false,
+    allowInfinity: false,
+  })
   @Type(() => Number)
   ch8!: number;
 
