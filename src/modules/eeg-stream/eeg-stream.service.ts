@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common'; // Jedno do wywealenia potem
 import { ConfigService } from '@nestjs/config';
 import { ClientKafka } from '@nestjs/microservices';
 import type { EegMarker } from 'common/enums';
@@ -23,6 +23,7 @@ export interface EegKafkaMessage {
 
 @Injectable()
 export class EegStreamService implements OnModuleInit {
+  private readonly logger = new Logger(EegStreamService.name); // do wywalenia potem
   private readonly eegTopic: string;
 
   constructor(
@@ -33,8 +34,16 @@ export class EegStreamService implements OnModuleInit {
     this.eegTopic = kafka.eegTopic;
   }
 
+  // async onModuleInit(): Promise<void> {
+  //   await this.kafkaClient.connect();
+  // }
+
   async onModuleInit(): Promise<void> {
-    await this.kafkaClient.connect();
+    try {
+      await this.kafkaClient.connect();
+    } catch {
+      this.logger.warn('Kafka failed to connect, ignoring for logic test flow');
+    }
   }
 
   sendEegSample(userId: string, sessionId: string, payload: EegPayloadDto): void {
