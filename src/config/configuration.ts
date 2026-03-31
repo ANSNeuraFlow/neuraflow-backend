@@ -11,6 +11,7 @@ export interface AppConfig {
   authTokenExpirationHours: number;
   prometheus: PrometheusConfig;
   kafka: KafkaConfig;
+  ray: RayConfig;
 }
 
 export interface PrometheusConfig {
@@ -38,6 +39,13 @@ export interface LoggerConfig {
   format: LoggerFormat;
 }
 
+export interface RayConfig {
+  headUrl: string;
+  webhookSecret: string;
+  trainScriptPath: string;
+  webhookUrl: string;
+}
+
 export default (): AppConfig => {
   const env = cleanEnv(process.env, {
     API_PORT: port({ default: 4000 }),
@@ -57,6 +65,10 @@ export default (): AppConfig => {
     PROMETHEUS_TIMEOUT_MS: num({ default: 4000 }),
     KAFKA_BROKERS: str({ default: '10.200.40.10:9092' }),
     KAFKA_EEG_TOPIC: str({ default: 'eeg_data' }),
+    RAY_HEAD_URL: url({ default: 'http://10.200.40.10:8265' }),
+    RAY_WEBHOOK_SECRET: str(),
+    RAY_TRAIN_SCRIPT_PATH: str({ default: '/opt/neuraflow/train.py' }),
+    RAY_WEBHOOK_URL: url({ default: 'http://10.200.40.19:4000/api/v1/internal/webhook/ray' }),
   });
 
   const config: AppConfig = {
@@ -81,6 +93,12 @@ export default (): AppConfig => {
     kafka: {
       brokers: env.KAFKA_BROKERS.split(','),
       eegTopic: env.KAFKA_EEG_TOPIC,
+    },
+    ray: {
+      headUrl: env.RAY_HEAD_URL,
+      webhookSecret: env.RAY_WEBHOOK_SECRET,
+      trainScriptPath: env.RAY_TRAIN_SCRIPT_PATH,
+      webhookUrl: env.RAY_WEBHOOK_URL,
     },
   };
 
