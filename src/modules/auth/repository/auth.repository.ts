@@ -23,6 +23,7 @@ export class AuthRepository {
         'users.lastName',
         'users.isVerified',
         'users.isPasswordChangeRequired',
+        'users.roleId',
         'roles.name as role',
       ])
       .where('users.email', '=', email)

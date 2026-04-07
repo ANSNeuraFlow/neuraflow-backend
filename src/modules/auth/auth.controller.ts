@@ -48,4 +48,12 @@ export class AuthController {
   async forceChangePassword(@Body() dto: ForceChangePasswordDto, @Res({ passthrough: true }) res: Response) {
     return this.authService.forceChangePassword(dto, res);
   }
+  @UseGuards(AuthGuard)
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Log out the current user' })
+  logout(@Res({ passthrough: true }) res: Response) {
+    return this.authService.logout(res);
+  }
 }

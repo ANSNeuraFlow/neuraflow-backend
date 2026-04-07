@@ -24,10 +24,17 @@ async function seedRolesAndPermissions(db: Kysely<DB>) {
   const adminRole = await db.selectFrom('roles').select(['id']).where('id', '=', 1).executeTakeFirstOrThrow();
 
   const permissionsList = [
+    { name: 'VIEW_ADMIN_PANEL' },
     { name: 'users:read' },
     { name: 'users:write' },
+    { name: 'users:delete' },
     { name: 'roles:read' },
     { name: 'roles:write' },
+    { name: 'clusters:read' },
+    { name: 'clusters:write' },
+    { name: 'audit:read' },
+    { name: 'settings:read' },
+    { name: 'settings:write' },
   ];
 
   await db

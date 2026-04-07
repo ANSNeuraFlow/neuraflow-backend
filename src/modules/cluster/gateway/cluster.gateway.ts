@@ -15,7 +15,7 @@ import { ClusterService } from '../cluster.service';
 import type { AuthenticatedSocket } from '../models/ws.model';
 import { WsAuthGuard } from './ws-auth.guard';
 
-const METRICS_INTERVAL_MS = 5000;
+const METRICS_INTERVAL_MS = 1000;
 
 @UseFilters(WsExceptionFilter)
 @UseGuards(WsAuthGuard)

@@ -84,7 +84,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: user.roleId != null && user.role != null ? { id: user.roleId, name: user.role } : null,
         isVerified: user.isVerified,
         isPasswordChangeRequired: user.isPasswordChangeRequired,
       },
@@ -153,9 +153,16 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      role: user.role,
+      role: user.roleId != null && user.role != null ? { id: user.roleId, name: user.role } : null,
       createdAt: user.createdAt,
       permissions,
     };
+  }
+  logout(res: Response) {
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
   }
 }
