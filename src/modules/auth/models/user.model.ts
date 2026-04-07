@@ -11,6 +11,7 @@ export class UserModel {
   isVerified: boolean;
   isPasswordChangeRequired: boolean;
   role?: string | null;
+  roleId?: number | null;
 
   constructor(user: UserQueryResult) {
     this.id = user.id!;
@@ -21,6 +22,7 @@ export class UserModel {
     this.isVerified = user.isVerified!;
     this.isPasswordChangeRequired = user.isPasswordChangeRequired!;
     this.role = user.role;
+    this.roleId = user.roleId ?? null;
   }
 
   static fromResult(result: UserQueryResult): UserModel {
