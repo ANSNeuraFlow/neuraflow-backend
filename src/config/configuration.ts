@@ -2,6 +2,7 @@ import { cleanEnv, num, port, str, url } from 'envalid';
 
 export interface AppConfig {
   apiPort: number;
+  frontendUrl: string;
   database: DatabaseConfig;
   logger: LoggerConfig;
   isDevEnv: boolean;
@@ -68,7 +69,8 @@ export default (): AppConfig => {
     RAY_HEAD_URL: url({ default: 'http://10.200.40.10:8265' }),
     RAY_WEBHOOK_SECRET: str(),
     RAY_TRAIN_SCRIPT_PATH: str({ default: '/opt/neuraflow/train.py' }),
-    RAY_WEBHOOK_URL: url({ default: 'http://10.200.40.19:4000/api/v1/internal/webhook/ray' }),
+    RAY_WEBHOOK_URL: url({ default: 'http://10.200.40.20:4000/api/v1/internal/webhook/ray' }),
+    FRONTEND_URL: str({ default: 'http://localhost:3000' }),
   });
 
   const config: AppConfig = {
@@ -100,6 +102,7 @@ export default (): AppConfig => {
       trainScriptPath: env.RAY_TRAIN_SCRIPT_PATH,
       webhookUrl: env.RAY_WEBHOOK_URL,
     },
+    frontendUrl: env.FRONTEND_URL,
   };
 
   return config;
