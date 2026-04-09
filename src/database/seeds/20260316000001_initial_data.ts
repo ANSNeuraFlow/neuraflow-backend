@@ -25,16 +25,16 @@ async function seedRolesAndPermissions(db: Kysely<DB>) {
 
   const permissionsList = [
     { name: 'VIEW_ADMIN_PANEL' },
-    { name: 'users:read' },
-    { name: 'users:write' },
-    { name: 'users:delete' },
-    { name: 'roles:read' },
-    { name: 'roles:write' },
-    { name: 'clusters:read' },
-    { name: 'clusters:write' },
-    { name: 'audit:read' },
-    { name: 'settings:read' },
-    { name: 'settings:write' },
+    { name: 'USERS_READ' },
+    { name: 'USERS_WRITE' },
+    { name: 'USERS_DELETE' },
+    { name: 'ROLES_READ' },
+    { name: 'ROLES_WRITE' },
+    { name: 'CLUSTERS_READ' },
+    { name: 'CLUSTERS_WRITE' },
+    { name: 'AUDIT_READ' },
+    { name: 'SETTINGS_READ' },
+    { name: 'SETTINGS_WRITE' },
   ];
 
   await db
