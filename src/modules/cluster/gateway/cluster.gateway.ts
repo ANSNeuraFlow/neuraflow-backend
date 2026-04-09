@@ -22,7 +22,7 @@ const METRICS_INTERVAL_MS = 1000;
 @WebSocketGateway({
   namespace: 'cluster',
   cors: {
-    origin: '*',
+    origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     credentials: true,
   },
 })
