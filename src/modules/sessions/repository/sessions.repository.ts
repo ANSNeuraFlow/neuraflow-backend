@@ -18,7 +18,7 @@ export class SessionsRepository {
       .values({
         id: uuidv7(),
         userId,
-        deviceName: dto.deviceName,
+        sessionName: dto.sessionName,
         protocolName: dto.protocolName,
         status: SessionStatus.INITIALIZED,
       })

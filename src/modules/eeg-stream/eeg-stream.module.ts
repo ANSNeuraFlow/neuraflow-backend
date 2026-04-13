@@ -7,6 +7,8 @@ import { logLevel } from 'kafkajs';
 import { AuthModule } from '../auth/auth.module';
 import { SessionsModule } from '../sessions/sessions.module';
 import { EegStreamService } from './eeg-stream.service';
+import { EegDisplayGateway } from './gateway/eeg-display.gateway';
+import { EegDisplayAuthGuard } from './gateway/eeg-display-auth.guard';
 import { EegStreamGateway } from './gateway/eeg-stream.gateway';
 import { EegWsAuthGuard } from './gateway/eeg-ws-auth.guard';
 
@@ -40,6 +42,6 @@ import { EegWsAuthGuard } from './gateway/eeg-ws-auth.guard';
       },
     ]),
   ],
-  providers: [EegStreamGateway, EegStreamService, EegWsAuthGuard],
+  providers: [EegStreamGateway, EegStreamService, EegWsAuthGuard, EegDisplayGateway, EegDisplayAuthGuard],
 })
 export class EegStreamModule {}
