@@ -6,7 +6,7 @@ import type { CreatedAt, OptionalAt, UpdatedAt } from './common';
 export interface EegSessionTable {
   id: Generated<string>;
   userId: string;
-  deviceName: string;
+  sessionName: string;
   protocolName: string;
   status: SessionStatus;
   createdAt: CreatedAt;

@@ -4,7 +4,7 @@ import type { EegSession } from 'database/schema/eeg-session';
 export class SessionModel {
   id: string;
   userId: string;
-  deviceName: string;
+  sessionName: string;
   protocolName: string;
   status: SessionStatus;
   createdAt: Date;
@@ -15,7 +15,7 @@ export class SessionModel {
   constructor(session: EegSession) {
     this.id = session.id;
     this.userId = session.userId;
-    this.deviceName = session.deviceName;
+    this.sessionName = session.sessionName;
     this.protocolName = session.protocolName;
     this.status = session.status;
     this.createdAt = session.createdAt;
