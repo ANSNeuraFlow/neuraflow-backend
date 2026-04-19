@@ -1,5 +1,6 @@
 import type { EegSessionTable } from './eeg-session';
 import type { MlModelTable } from './ml-model';
+import type { ModelDeploymentTable } from './model-deployment';
 import type { PermissionTable, RolePermissionTable } from './permission';
 import type { RoleTable } from './role';
 import type { SeedHistoryTable } from './seed';
@@ -15,4 +16,5 @@ export interface DB {
   eegSessions: EegSessionTable;
   mlModels: MlModelTable;
   trainingJobs: TrainingJobTable;
+  modelDeployments: ModelDeploymentTable;
 }
