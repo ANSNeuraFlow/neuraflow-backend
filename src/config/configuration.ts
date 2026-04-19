@@ -42,9 +42,14 @@ export interface LoggerConfig {
 
 export interface RayConfig {
   headUrl: string;
+  serveBaseUrl: string;
   webhookSecret: string;
   trainScriptPath: string;
   webhookUrl: string;
+  serveScriptPath: string;
+  serveScriptDir: string;
+  startingTimeoutMs: number;
+  syncIntervalMs: number;
 }
 
 export default (): AppConfig => {
@@ -67,10 +72,15 @@ export default (): AppConfig => {
     KAFKA_BROKERS: str({ default: '10.200.40.10:9092' }),
     KAFKA_EEG_TOPIC: str({ default: 'eeg_data' }),
     RAY_HEAD_URL: url({ default: 'http://10.200.40.10:8265' }),
+    RAY_SERVE_BASE_URL: url({ default: 'http://10.200.40.10:8000' }),
     RAY_WEBHOOK_SECRET: str(),
     RAY_TRAIN_SCRIPT_PATH: str({ default: '/opt/neuraflow/train.py' }),
     RAY_WEBHOOK_URL: url({ default: 'http://10.200.40.22:4000/api/v1/internal/webhook/ray' }),
     FRONTEND_URL: str({ default: 'http://localhost:3000' }),
+    RAY_SERVE_SCRIPT_PATH: str({ default: '/opt/neuraflow/serve_model.py' }),
+    RAY_SERVE_SCRIPT_DIR: str({ default: '/opt/neuraflow' }),
+    RAY_STARTING_TIMEOUT_MS: num({ default: 600000 }),
+    RAY_SYNC_INTERVAL_MS: num({ default: 5000 }),
   });
 
   const config: AppConfig = {
@@ -98,9 +108,14 @@ export default (): AppConfig => {
     },
     ray: {
       headUrl: env.RAY_HEAD_URL,
+      serveBaseUrl: env.RAY_SERVE_BASE_URL,
       webhookSecret: env.RAY_WEBHOOK_SECRET,
       trainScriptPath: env.RAY_TRAIN_SCRIPT_PATH,
       webhookUrl: env.RAY_WEBHOOK_URL,
+      serveScriptPath: env.RAY_SERVE_SCRIPT_PATH,
+      serveScriptDir: env.RAY_SERVE_SCRIPT_DIR,
+      startingTimeoutMs: env.RAY_STARTING_TIMEOUT_MS,
+      syncIntervalMs: env.RAY_SYNC_INTERVAL_MS,
     },
     frontendUrl: env.FRONTEND_URL,
   };

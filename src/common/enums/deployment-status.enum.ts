@@ -1,0 +1,8 @@
+export enum DeploymentStatus {
+  PENDING = 'PENDING',
+  STARTING = 'STARTING',
+  RUNNING = 'RUNNING',
+  STOPPING = 'STOPPING',
+  STOPPED = 'STOPPED',
+  FAILED = 'FAILED',
+}

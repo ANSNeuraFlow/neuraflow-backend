@@ -1,3 +1,4 @@
+export * from './deployment-status.enum';
 export * from './eeg-marker.enum';
 export * from './model-status.enum';
 export * from './session-status.enum';
