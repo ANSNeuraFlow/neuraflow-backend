@@ -13,6 +13,13 @@ export interface AppConfig {
   prometheus: PrometheusConfig;
   kafka: KafkaConfig;
   ray: RayConfig;
+  bridge: BridgeConfig;
+}
+
+export interface BridgeConfig {
+  authCodeTtlMinutes: number;
+  tokenTtlHours: number;
+  allowedClientIds: string[];
 }
 
 export interface PrometheusConfig {
@@ -81,6 +88,9 @@ export default (): AppConfig => {
     RAY_SERVE_SCRIPT_DIR: str({ default: '/opt/neuraflow' }),
     RAY_STARTING_TIMEOUT_MS: num({ default: 600000 }),
     RAY_SYNC_INTERVAL_MS: num({ default: 5000 }),
+    BRIDGE_AUTH_CODE_TTL_MINUTES: num({ default: 2 }),
+    BRIDGE_TOKEN_TTL_HOURS: num({ default: 24 }),
+    BRIDGE_ALLOWED_CLIENT_IDS: str({ default: 'cyton_bridge' }),
   });
 
   const config: AppConfig = {
@@ -118,6 +128,11 @@ export default (): AppConfig => {
       syncIntervalMs: env.RAY_SYNC_INTERVAL_MS,
     },
     frontendUrl: env.FRONTEND_URL,
+    bridge: {
+      authCodeTtlMinutes: env.BRIDGE_AUTH_CODE_TTL_MINUTES,
+      tokenTtlHours: env.BRIDGE_TOKEN_TTL_HOURS,
+      allowedClientIds: env.BRIDGE_ALLOWED_CLIENT_IDS.split(',').map((s) => s.trim()),
+    },
   };
 
   return config;
