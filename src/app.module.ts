@@ -2,12 +2,15 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
 import configuration, { AppConfig, LoggerConfig, LoggerFormat } from './config/configuration';
 import { DatabaseModule } from './database/database.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BridgeAuthModule } from './modules/bridge-auth/bridge-auth.module';
+import { BridgeDeviceModule } from './modules/bridge-device/bridge-device.module';
 import { ClusterModule } from './modules/cluster/cluster.module';
 import { EegStreamModule } from './modules/eeg-stream/eeg-stream.module';
 import { HealthModule } from './modules/health/health.module';
@@ -48,6 +51,7 @@ import { TrainingJobsModule } from './modules/training-jobs/training-jobs.module
     }),
     DatabaseModule,
 
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
     ScheduleModule.forRoot(),
     HealthModule,
     AuthModule,
@@ -58,6 +62,8 @@ import { TrainingJobsModule } from './modules/training-jobs/training-jobs.module
     MlModelsModule,
     TrainingJobsModule,
     ModelDeploymentModule,
+    BridgeAuthModule,
+    BridgeDeviceModule,
   ],
   providers: [Logger],
 })

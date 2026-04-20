@@ -1,3 +1,6 @@
+import type { BridgeAuthCodeTable } from './bridge-auth-code';
+import type { BridgeDeviceTable } from './bridge-device';
+import type { BridgeTokenTable } from './bridge-token';
 import type { EegSessionTable } from './eeg-session';
 import type { MlModelTable } from './ml-model';
 import type { ModelDeploymentTable } from './model-deployment';
@@ -17,4 +20,7 @@ export interface DB {
   mlModels: MlModelTable;
   trainingJobs: TrainingJobTable;
   modelDeployments: ModelDeploymentTable;
+  bridgeAuthCodes: BridgeAuthCodeTable;
+  bridgeTokens: BridgeTokenTable;
+  bridgeDevices: BridgeDeviceTable;
 }
