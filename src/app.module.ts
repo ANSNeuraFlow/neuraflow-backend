@@ -18,6 +18,7 @@ import { MlModelsModule } from './modules/ml-models/ml-models.module';
 import { ModelDeploymentModule } from './modules/model-deployment/model-deployment.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { TrainingJobsModule } from './modules/training-jobs/training-jobs.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { TrainingJobsModule } from './modules/training-jobs/training-jobs.module
     ScheduleModule.forRoot(),
     HealthModule,
     AuthModule,
+    UsersModule,
     AdminModule,
     ClusterModule,
     EegStreamModule,

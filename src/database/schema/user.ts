@@ -8,6 +8,9 @@ export interface UserTable {
   password: string;
   firstName: string;
   lastName: string;
+  bio: string | null;
+  phoneNumber: string | null;
+  dateOfBirth: string | null;
   isVerified: Generated<boolean>;
   isPasswordChangeRequired: Generated<boolean>;
   roleId: number | null;

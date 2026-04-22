@@ -82,7 +82,7 @@ export default (): AppConfig => {
     RAY_SERVE_BASE_URL: url({ default: 'http://10.200.40.10:8000' }),
     RAY_WEBHOOK_SECRET: str(),
     RAY_TRAIN_SCRIPT_PATH: str({ default: '/opt/neuraflow/train.py' }),
-    RAY_WEBHOOK_URL: url({ default: 'http://10.200.40.22:4000/api/v1/internal/webhook/ray' }),
+    RAY_WEBHOOK_URL: url({ default: 'http://10.200.40.26:4000/api/v1/internal/webhook/ray' }),
     FRONTEND_URL: str({ default: 'http://localhost:3000' }),
     RAY_SERVE_SCRIPT_PATH: str({ default: '/opt/neuraflow/serve_model.py' }),
     RAY_SERVE_SCRIPT_DIR: str({ default: '/opt/neuraflow' }),
