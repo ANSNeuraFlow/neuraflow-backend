@@ -127,6 +127,9 @@ importers:
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
+      ws:
+        specifier: ^8.18.0
+        version: 8.18.3
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -185,15 +188,15 @@ importers:
       '@types/pg':
         specifier: ^8.18.0
         version: 8.18.0
-      '@types/socket.io':
-        specifier: ^3.0.2
-        version: 3.0.2
       '@types/supertest':
         specifier: ^6.0.3
         version: 6.0.3
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
+      '@types/ws':
+        specifier: ^8.18.0
+        version: 8.18.1
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.57.0
         version: 8.57.0(@typescript-eslint/parser@8.57.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
@@ -2371,11 +2374,6 @@ packages:
   '@types/serve-static@2.2.0':
     resolution:
       { integrity: sha512-8mam4H1NHLtu7nmtalF7eyBH14QyOASmcxHhSfEoRyr0nP/YdoesEtU+uSRvMe96TW/HPTtkoKqQLl53N7UXMQ== }
-
-  '@types/socket.io@3.0.2':
-    resolution:
-      { integrity: sha512-pu0sN9m5VjCxBZVK8hW37ZcMe8rjn4HHggBN5CbaRTvFwv5jOmuIRZEuddsBPa9Th0ts0SIo3Niukq+95cMBbQ== }
-    deprecated: This is a stub types definition. socket.io provides its own type definitions, so you do not need this installed.
 
   '@types/stack-utils@2.0.3':
     resolution:
@@ -9531,14 +9529,6 @@ snapshots:
     dependencies:
       '@types/http-errors': 2.0.5
       '@types/node': 24.12.0
-
-  '@types/socket.io@3.0.2':
-    dependencies:
-      socket.io: 4.8.3
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
 
   '@types/stack-utils@2.0.3': {}
 

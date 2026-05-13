@@ -11,6 +11,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BridgeAuthModule } from './modules/bridge-auth/bridge-auth.module';
 import { BridgeDeviceModule } from './modules/bridge-device/bridge-device.module';
+import { BridgeStreamModule } from './modules/bridge-stream/bridge-stream.module';
 import { ClusterModule } from './modules/cluster/cluster.module';
 import { EegStreamModule } from './modules/eeg-stream/eeg-stream.module';
 import { HealthModule } from './modules/health/health.module';
@@ -66,6 +67,7 @@ import { UsersModule } from './modules/users/users.module';
     ModelDeploymentModule,
     BridgeAuthModule,
     BridgeDeviceModule,
+    BridgeStreamModule,
   ],
   providers: [Logger],
 })
