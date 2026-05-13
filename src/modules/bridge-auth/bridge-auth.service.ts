@@ -42,6 +42,11 @@ export class BridgeAuthService {
       throw new BadRequestException(`Unknown client_id: ${clientId}`);
     }
 
+    const user = await this.repo.getUserById(userId);
+    if (!user) {
+      throw new NotFoundException('User account not found');
+    }
+
     const code = randomBytes(32).toString('hex');
     const ttlMs = this.bridgeConfig.authCodeTtlMinutes * 60 * 1000;
     const expiresAt = new Date(Date.now() + ttlMs);
