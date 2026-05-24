@@ -16,6 +16,10 @@ import { EegWsAuthGuard } from './gateway/eeg-ws-auth.guard';
   imports: [
     AuthModule,
     SessionsModule,
+    // ---------- Konfiguracja i Połączenie z Apache Kafka --------------------
+    // Rejestruje klienta Kafki (KAFKA_SERVICE) tworzącego stałe połączenie po protokole TCP.
+    // Ustawienia (IP brokera) zaczytywane są asynchronicznie ze zmiennych środowiskowych.
+    // ------------------------------------------------------------------------
     ClientsModule.registerAsync([
       {
         name: 'KAFKA_SERVICE',
@@ -30,8 +34,7 @@ import { EegWsAuthGuard } from './gateway/eeg-ws-auth.guard';
               client: {
                 clientId: 'neuraflow-eeg-producer',
                 brokers: kafkaConfig.brokers,
-                logLevel: logLevel.NOTHING,
-                //logLevel: process.env.NODE_ENV === 'production' ? logLevel.ERROR : logLevel.INFO,
+                logLevel: process.env.NODE_ENV === 'production' ? logLevel.NOTHING : logLevel.WARN,
               },
               producer: {
                 allowAutoTopicCreation: false,
@@ -43,5 +46,6 @@ import { EegWsAuthGuard } from './gateway/eeg-ws-auth.guard';
     ]),
   ],
   providers: [EegStreamGateway, EegStreamService, EegWsAuthGuard, EegDisplayGateway, EegDisplayAuthGuard],
+  exports: [EegStreamService],
 })
 export class EegStreamModule {}

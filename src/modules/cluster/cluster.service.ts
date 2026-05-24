@@ -7,6 +7,9 @@ import { ClusterQueryService } from './services/cluster-query.service';
 export class ClusterService {
   constructor(private readonly clusterQueryService: ClusterQueryService) {}
 
+  // ---------- Pobranie Przeglądu Klastra ----------------------------------
+  // Funkcja zwraca aktualny status oraz podsumowanie wszystkich węzłów.
+  // ------------------------------------------------------------------------
   async getClusterOverview(): Promise<ClusterOverviewModel> {
     const nodes = await this.clusterQueryService.getNodes();
     const summary = this.buildSummary(nodes);
@@ -18,6 +21,9 @@ export class ClusterService {
     };
   }
 
+  // ---------- Budowanie Podsumowania Klastra ------------------------------
+  // Funkcja agreguje użycie zasobów sprzętowych dla dostarczonej listy węzłów.
+  // ------------------------------------------------------------------------
   private buildSummary(nodes: ClusterNodeModel[]): ClusterSummaryModel {
     const onlineNodes = nodes.filter((n) => n.isOnline);
 
@@ -55,6 +61,9 @@ export class ClusterService {
     };
   }
 
+  // ---------- Sumowanie Lub Wartość Null ----------------------------------
+  // Funkcja sumuje tablicę wartości pomijając te mające wartość null.
+  // ------------------------------------------------------------------------
   private sumOrNull(values: (number | null)[]): number | null {
     const valid = values.filter((v): v is number => v !== null);
     return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) : null;

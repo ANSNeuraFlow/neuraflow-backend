@@ -34,10 +34,16 @@ export class ClusterGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
   constructor(private readonly clusterService: ClusterService) {}
 
+  // ---------- Inicjalizacja Bramki WebSocket ------------------------------
+  // Funkcja wywoływana jednorazowo po poprawnym uruchomieniu serwera WebSocket.
+  // ------------------------------------------------------------------------
   afterInit() {
     this.logger.log('ClusterGateway initialized');
   }
 
+  // ---------- Obsługa Nowego Połączenia -----------------------------------
+  // Funkcja loguje nowego klienta i wysyła mu początkowe dane o klastrze.
+  // ------------------------------------------------------------------------
   async handleConnection(client: AuthenticatedSocket) {
     this.logger.log(`Client connected: ${client.id} (user: ${client.data.user?.email ?? 'unknown'})`);
 
@@ -49,10 +55,16 @@ export class ClusterGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     }
   }
 
+  // ---------- Obsługa Rozłączenia Klienta ---------------------------------
+  // Funkcja rejestruje w logach fakt rozłączenia się danego klienta.
+  // ------------------------------------------------------------------------
   handleDisconnect(client: AuthenticatedSocket) {
     this.logger.log(`Client disconnected: ${client.id} (user: ${client.data.user?.email ?? 'unknown'})`);
   }
 
+  // ---------- Rozsyłanie Metryk do Klientów -------------------------------
+  // Funkcja cyklicznie pobiera i rozsyła dane o klastrze wszystkim połączonym klientom.
+  // ------------------------------------------------------------------------
   @Interval(METRICS_INTERVAL_MS)
   async broadcastMetrics() {
     const connectedSockets = await this.server.fetchSockets();

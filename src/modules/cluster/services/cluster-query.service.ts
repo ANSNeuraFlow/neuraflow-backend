@@ -8,16 +8,25 @@ import { PrometheusService } from './prometheus.service';
 export class ClusterQueryService {
   constructor(private readonly prometheusService: PrometheusService) {}
 
+  // ---------- Pobieranie Statusu Węzłów -----------------------------------
+  // Funkcja pobiera i mapuje dane z Prometheusa określające stan wszystkich węzłów.
+  // ------------------------------------------------------------------------
   async getNodes(): Promise<ClusterNodeModel[]> {
     const [cpuResults, memUsedResults, memTotalResults, diskUsedResults, diskTotalResults, upResults] =
       await Promise.all([
+        // Zapytanie obliczające procentowe użycie procesora (skonwertowany rate idle mode)
         this.prometheusService.query('100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)'),
+        // Zapytanie pobierające ilość zajętej pamięci RAM (Total - Available)
         this.prometheusService.query('node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes'),
+        // Zapytanie pobierające całkowitą, dostępną wielkość pamięci RAM
         this.prometheusService.query('node_memory_MemTotal_bytes'),
+        // Zapytanie sprawdzające ilość użytej przestrzeni dyskowej na głównej partycji
         this.prometheusService.query(
           'node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs",fstype!="rootfs"} - node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs",fstype!="rootfs"}',
         ),
+        // Zapytanie pobierające całkowity rozmiar przestrzeni dyskowej na partycji głównej
         this.prometheusService.query('node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs",fstype!="rootfs"}'),
+        // Zapytanie monitorujące, czy endpoint eksportera działa (1 = online, 0 = offline)
         this.prometheusService.query('up{job="prometheus"}'),
       ]);
 

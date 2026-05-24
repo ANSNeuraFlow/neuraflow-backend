@@ -25,6 +25,9 @@ import { TrainingJobsService } from './training-jobs.service';
 export class TrainingJobsController {
   constructor(private readonly trainingJobsService: TrainingJobsService) {}
 
+  // ---------- Zlecenie Treningu Modelu ------------------------------------
+  // Endpoint tworzący nowe zadanie ML (Training Job) odbierający z żądania listę identyfikatorów sesji EEG. Autoryzowany tokenem JWT.
+  // ------------------------------------------------------------------------
   @Post('training-jobs')
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
@@ -34,6 +37,9 @@ export class TrainingJobsController {
     return this.trainingJobsService.dispatch(req.user.id, dto.sessionIds);
   }
 
+  // ---------- Pobieranie Szczegółów Zadania -------------------------------
+  // Służy do sprawdzenia aktualnego statusu konkretnego zadania (np. czy już się uczy, czy zostało ukończone). Użytkownik przesyła jego UUID na parametry URL.
+  // ------------------------------------------------------------------------
   @Get('training-jobs/:id')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -43,6 +49,9 @@ export class TrainingJobsController {
     return this.trainingJobsService.findOne(req.user.id, id);
   }
 
+  // ---------- Pobieranie Historii Zadań -----------------------------------
+  // Zwraca listę wszystkich zleconych przez użytkownika zadań treningowych.
+  // ------------------------------------------------------------------------
   @Get('training-jobs')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -52,6 +61,9 @@ export class TrainingJobsController {
     return this.trainingJobsService.findAllForUser(req.user.id);
   }
 
+  // ---------- Endpoint Kosmiczny (Wewnętrzny Webhook Ray) -----------------
+  // Ukryty, niedostępny dla użytkowników końcowych punkt styku (endpoint), do którego po cichu dzwoni klaster Ray, weryfikując się specjalnym zaszyfrowanym nagłówkiem X-Webhook-Secret.
+  // ------------------------------------------------------------------------
   @Post('internal/webhook/ray')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '[Internal] Ray cluster training result webhook' })

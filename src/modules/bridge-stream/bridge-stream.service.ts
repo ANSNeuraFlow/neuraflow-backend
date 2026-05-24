@@ -4,18 +4,28 @@ import type { Duplex } from 'node:stream';
 
 import { Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { EegMarker } from 'common/enums';
 import { BridgeAuthRepository } from 'modules/bridge-auth/repository/bridge-auth.repository';
+import { EegStreamService } from 'modules/eeg-stream/eeg-stream.service';
+import { SessionsService } from 'modules/sessions/sessions.service';
 import { RawData, WebSocket, WebSocketServer } from 'ws';
 
 import type { BridgeControlAction } from './dtos/bridge-control-command.dto';
 
 const CONTROL_WS_PATH = '/api/v1/bridge/control';
 const STREAM_WS_PATH = '/api/v1/bridge/stream';
-
-/** Bridge binary frame: int64 ts, uint32 seq, 8× float32 µV (from neuraflow-bridge `DeviceManager`). */
 const BRIDGE_FRAME_BYTES = 44;
 
-/** JSON protocol (text frames). */
+/** qint64 LE Wall-clock ms from bridge (DeviceManager uses QDateTime::currentMSecsSinceEpoch). */
+const BRIDGE_TS_MIN_MS = 1_577_836_800_000n; // 2020-01-01
+const BRIDGE_TS_MAX_MS = 4_294_967_295_000n; // year ~2106 (below uint32 ms edge cases)
+/** Reject decoded floats outside |x| (µV) — misaligned frames become huge ints / denormals. */
+const BRIDGE_MAX_UV_ABS = 2_000_000;
+/** Search this far ahead for a valid frame start after a bad alignment (bytes). */
+const BRIDGE_RESYNC_SCAN_MAX = 200;
+/** Give up byte-by-byte slip after this many steps (avoid infinite loop on noise). */
+const BRIDGE_RESYNC_MAX_SLIP_STEPS = 50_000;
+
 export interface BridgeControlServerMessage {
   type: 'connected' | 'command';
   action?: BridgeControlAction | 'send_marker';
@@ -27,30 +37,57 @@ export interface BridgeControlClientMessage {
   streaming?: boolean;
 }
 
+const EEG_MARKER_VALUES = new Set<string>(Object.values(EegMarker));
+
+function isEegMarker(value: string): value is EegMarker {
+  return EEG_MARKER_VALUES.has(value);
+}
+
+function isPlausibleBridgeFrame(buf: Buffer, off: number): boolean {
+  if (off + BRIDGE_FRAME_BYTES > buf.length) {
+    return false;
+  }
+  const ts = buf.readBigInt64LE(off);
+  if (ts < BRIDGE_TS_MIN_MS || ts > BRIDGE_TS_MAX_MS) {
+    return false;
+  }
+  for (let c = 0; c < 8; c++) {
+    const v = buf.readFloatLE(off + 12 + c * 4);
+    if (!Number.isFinite(v) || Math.abs(v) > BRIDGE_MAX_UV_ABS) {
+      return false;
+    }
+  }
+  return true;
+}
+
 @Injectable()
 export class BridgeStreamService implements OnModuleDestroy {
   private readonly logger = new Logger(BridgeStreamService.name);
   private wss: WebSocketServer | null = null;
   private wssStream: WebSocketServer | null = null;
-  /** userId -> control sockets (for server-originated commands). */
   private readonly socketsByUser = new Map<string, Set<WebSocket>>();
-  /** userId -> EEG stream upload sockets (binary frames from bridge). */
   private readonly streamSocketsByUser = new Map<string, Set<WebSocket>>();
-  /** Last known device streaming state reported by bridge control channel, per user. */
+  private readonly activeSessionByUser = new Map<string, string>();
+  private readonly pendingMarkerByUser = new Map<string, EegMarker>();
   private readonly streamingByUser = new Map<string, boolean>();
+  /** Epoch-ms of the last EEG frame forwarded per user — used to infer live streaming state. */
+  private readonly lastFrameMsbyUser = new Map<string, number>();
+  /** Warn once per user when EEG frames arrive but no REST session binding yet. */
+  private readonly discardBinaryNoSessionWarnedUserIds = new Set<string>();
+  /** Reassemble EEG frames split across WS messages / coalesced by the stack (44 B per sample). */
+  private readonly streamBinaryRxBufferBySocket = new Map<WebSocket, Buffer>();
+  /** Throttle resync warnings after misaligned binary uplink. */
+  private readonly bridgeStreamResyncLogLastMsByUser = new Map<string, number>();
   private httpServer: Server | null = null;
   private upgradeListener: ((request: IncomingMessage, socket: Duplex, head: Buffer) => void) | null = null;
 
   constructor(
     private readonly httpAdapterHost: HttpAdapterHost,
     private readonly bridgeAuthRepo: BridgeAuthRepository,
+    private readonly eegStreamService: EegStreamService,
+    private readonly sessionsService: SessionsService,
   ) {}
 
-  /**
-   * Attach raw `ws` upgrade handlers. Call **after** `app.listen()` so the HTTP server
-   * is the bound listener, and use `prependListener` so `/api/v1/bridge/*` is handled
-   * before Socket.IO's Engine (which would otherwise reject unknown upgrade paths).
-   */
   registerHttpUpgradeHandlers(): void {
     if (this.upgradeListener) {
       return;
@@ -119,9 +156,6 @@ export class BridgeStreamService implements OnModuleDestroy {
     this.httpServer = null;
   }
 
-  /**
-   * Sends a streaming command to all bridge **control** sockets for the given user (user JWT id).
-   */
   sendStreamingCommand(userId: string, action: BridgeControlAction): number {
     const set = this.socketsByUser.get(userId);
     if (!set || set.size === 0) {
@@ -143,9 +177,6 @@ export class BridgeStreamService implements OnModuleDestroy {
     return sent;
   }
 
-  /**
-   * Sends a BCI marker command to all bridge control sockets for the user (desktop relays to stream uplink).
-   */
   sendMarkerCommand(userId: string, marker: string): number {
     const set = this.socketsByUser.get(userId);
     if (!set || set.size === 0) {
@@ -181,29 +212,57 @@ export class BridgeStreamService implements OnModuleDestroy {
     const streamConnected =
       !!streamSockets && streamSockets.size > 0 && [...streamSockets].some((ws) => ws.readyState === WebSocket.OPEN);
 
-    const streaming = this.streamingByUser.get(userId) ?? false;
+    // Treat as streaming if the control socket reported streaming OR if EEG frames
+    // arrived within the last 5 s (handles bridge reconnect without re-emitting status).
+    const controlReported = this.streamingByUser.get(userId) ?? false;
+    const lastFrameMs = this.lastFrameMsbyUser.get(userId) ?? 0;
+    const streaming = controlReported || (streamConnected && Date.now() - lastFrameMs < 5_000);
 
     return { controlConnected, streamConnected, streaming };
   }
 
-  private async handleControlConnection(socket: WebSocket, request: IncomingMessage): Promise<void> {
+  async setActiveSession(userId: string, sessionId: string): Promise<void> {
+    await this.sessionsService.findOne(userId, sessionId);
+    this.activeSessionByUser.set(userId, sessionId);
+    this.discardBinaryNoSessionWarnedUserIds.delete(userId);
+    this.logger.debug(`Bridge Kafka session bound user=${userId} session=${sessionId}`);
+  }
+
+  clearActiveSession(userId: string): void {
+    this.activeSessionByUser.delete(userId);
+    this.pendingMarkerByUser.delete(userId);
+    this.discardBinaryNoSessionWarnedUserIds.delete(userId);
+  }
+
+  private async resolveUserIdFromBridgeUpgrade(
+    request: IncomingMessage,
+    channel: 'control' | 'stream',
+  ): Promise<{ userId: string } | { closeMessage: string }> {
     const token = this.extractBearer(request);
     if (!token) {
-      this.logger.warn('Bridge control WebSocket: missing Authorization Bearer token on upgrade');
-      socket.close(1008, 'Missing token');
-      return;
+      this.logger.warn(`Bridge ${channel} WebSocket: missing Authorization Bearer token on upgrade`);
+      return { closeMessage: 'Missing token' };
     }
 
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const bridgeToken = await this.bridgeAuthRepo.findTokenByHash(tokenHash);
 
     if (!bridgeToken || bridgeToken.isExpired()) {
-      this.logger.warn('Bridge control WebSocket: invalid or expired bridge token');
-      socket.close(1008, 'Invalid or expired bridge token');
-      return;
+      this.logger.warn(`Bridge ${channel} WebSocket: invalid or expired bridge token`);
+      return { closeMessage: 'Invalid or expired bridge token' };
     }
 
-    const userId = bridgeToken.userId;
+    return { userId: bridgeToken.userId };
+  }
+
+  private async handleControlConnection(socket: WebSocket, request: IncomingMessage): Promise<void> {
+    const auth = await this.resolveUserIdFromBridgeUpgrade(request, 'control');
+    if ('closeMessage' in auth) {
+      socket.close(1008, auth.closeMessage);
+      return;
+    }
+    const { userId } = auth;
+
     this.addControlSocket(userId, socket);
 
     socket.send(JSON.stringify({ type: 'connected' } satisfies BridgeControlServerMessage));
@@ -223,27 +282,14 @@ export class BridgeStreamService implements OnModuleDestroy {
     this.logger.log(`Bridge control client connected (user ${userId})`);
   }
 
-  /**
-   * Raw binary EEG frames from the desktop bridge (`StreamUploader`).
-   */
   private async handleStreamConnection(socket: WebSocket, request: IncomingMessage): Promise<void> {
-    const token = this.extractBearer(request);
-    if (!token) {
-      this.logger.warn('Bridge stream WebSocket: missing Authorization Bearer token on upgrade');
-      socket.close(1008, 'Missing token');
+    const auth = await this.resolveUserIdFromBridgeUpgrade(request, 'stream');
+    if ('closeMessage' in auth) {
+      socket.close(1008, auth.closeMessage);
       return;
     }
+    const { userId } = auth;
 
-    const tokenHash = createHash('sha256').update(token).digest('hex');
-    const bridgeToken = await this.bridgeAuthRepo.findTokenByHash(tokenHash);
-
-    if (!bridgeToken || bridgeToken.isExpired()) {
-      this.logger.warn('Bridge stream WebSocket: invalid or expired bridge token');
-      socket.close(1008, 'Invalid or expired bridge token');
-      return;
-    }
-
-    const userId = bridgeToken.userId;
     this.addStreamSocket(userId, socket);
     let frameCount = 0;
 
@@ -254,19 +300,15 @@ export class BridgeStreamService implements OnModuleDestroy {
       }
 
       const buf = this.toBuffer(data);
-      if (!buf) {
+      if (!buf || buf.length === 0) {
         return;
       }
       frameCount++;
-      if (buf.length % BRIDGE_FRAME_BYTES !== 0) {
-        this.logger.warn(
-          `Bridge stream odd payload length user=${userId} bytes=${buf.length} (expected multiple of ${BRIDGE_FRAME_BYTES})`,
-        );
-        return;
-      }
+      const framesProcessed = this.drainBridgeStreamBinaryChunks(socket, userId, buf);
       if (frameCount === 1 || frameCount % 250 === 0) {
-        const frames = buf.length / BRIDGE_FRAME_BYTES;
-        this.logger.debug(`Bridge stream user=${userId} batch frames=${frames} totalMessages=${frameCount}`);
+        this.logger.debug(
+          `Bridge stream user=${userId} inboundBytes=${buf.length} framesEmitted=${framesProcessed} totalChunks=${frameCount}`,
+        );
       }
     });
 
@@ -282,7 +324,67 @@ export class BridgeStreamService implements OnModuleDestroy {
     this.logger.log(`Bridge EEG stream client connected (user ${userId})`);
   }
 
-  /** Text JSON frames on the stream socket carry BCI markers (binary frames are EEG). */
+  private drainBridgeStreamBinaryChunks(socket: WebSocket, userId: string, chunk: Buffer): number {
+    const MAX_BACKLOG = 256 * BRIDGE_FRAME_BYTES;
+    let acc = this.streamBinaryRxBufferBySocket.get(socket);
+    acc = acc?.length ? Buffer.concat([acc, chunk]) : chunk;
+    if (acc.length > MAX_BACKLOG) {
+      this.logger.warn(`Bridge stream RX buffer overflow user=${userId} bytes=${acc.length}; resetting buffer`);
+      acc = chunk;
+    }
+
+    let framesEmitted = 0;
+    let slipSteps = 0;
+
+    while (acc.length >= BRIDGE_FRAME_BYTES) {
+      if (isPlausibleBridgeFrame(acc, 0)) {
+        this.forwardBridgeBinaryFrame(userId, Buffer.from(acc.subarray(0, BRIDGE_FRAME_BYTES)));
+        framesEmitted++;
+        acc = acc.subarray(BRIDGE_FRAME_BYTES);
+        slipSteps = 0;
+        continue;
+      }
+
+      let foundAt = -1;
+      const scanEnd = Math.min(BRIDGE_RESYNC_SCAN_MAX, acc.length - BRIDGE_FRAME_BYTES);
+      for (let s = 1; s <= scanEnd; s++) {
+        if (isPlausibleBridgeFrame(acc, s)) {
+          foundAt = s;
+          break;
+        }
+      }
+
+      if (foundAt >= 0) {
+        const now = Date.now();
+        const last = this.bridgeStreamResyncLogLastMsByUser.get(userId) ?? 0;
+        if (now - last > 15_000) {
+          this.bridgeStreamResyncLogLastMsByUser.set(userId, now);
+          this.logger.warn(
+            `Bridge stream resync user=${userId}: dropped ${foundAt} leading bytes (misaligned EEG frames)`,
+          );
+        }
+        acc = acc.subarray(foundAt);
+        slipSteps = 0;
+        continue;
+      }
+
+      acc = acc.subarray(1);
+      slipSteps++;
+      if (slipSteps > BRIDGE_RESYNC_MAX_SLIP_STEPS) {
+        this.logger.warn(`Bridge stream resync exhausted user=${userId}; discarding ${acc.length} bytes`);
+        acc = Buffer.alloc(0);
+        break;
+      }
+    }
+
+    if (acc.length > 0) {
+      this.streamBinaryRxBufferBySocket.set(socket, Buffer.from(acc));
+    } else {
+      this.streamBinaryRxBufferBySocket.delete(socket);
+    }
+    return framesEmitted;
+  }
+
   private tryHandleStreamTextMarker(userId: string, data: RawData): boolean {
     let text: string | null = null;
     if (typeof data === 'string') {
@@ -300,7 +402,14 @@ export class BridgeStreamService implements OnModuleDestroy {
       return false;
     }
     if (parsed.type === 'marker' && typeof parsed.marker === 'string') {
-      this.logger.debug(`Bridge stream marker user=${userId} marker=${parsed.marker}`);
+      if (isEegMarker(parsed.marker)) {
+        this.pendingMarkerByUser.set(userId, parsed.marker);
+        this.logger.debug(`Bridge stream marker user=${userId} marker=${parsed.marker}`);
+      } else {
+        this.logger.debug(
+          `Bridge stream marker ignored (not in EegMarker enum) user=${userId} marker=${parsed.marker}`,
+        );
+      }
       return true;
     }
     return false;
@@ -315,6 +424,10 @@ export class BridgeStreamService implements OnModuleDestroy {
     }
     if (Array.isArray(data)) {
       return Buffer.concat(data.map((c) => (Buffer.isBuffer(c) ? c : Buffer.from(c as ArrayBuffer))));
+    }
+    if (ArrayBuffer.isView(data)) {
+      const v = data as ArrayBufferView;
+      return Buffer.from(v.buffer, v.byteOffset, v.byteLength);
     }
     if (data instanceof ArrayBuffer) {
       return Buffer.from(data);
@@ -369,13 +482,56 @@ export class BridgeStreamService implements OnModuleDestroy {
   }
 
   private removeStreamSocket(userId: string, socket: WebSocket): void {
+    this.streamBinaryRxBufferBySocket.delete(socket);
     const set = this.streamSocketsByUser.get(userId);
     if (set) {
       set.delete(socket);
       if (set.size === 0) {
         this.streamSocketsByUser.delete(userId);
+        this.lastFrameMsbyUser.delete(userId);
+        this.clearActiveSession(userId);
       }
     }
+  }
+
+  private forwardBridgeBinaryFrame(userId: string, buf: Buffer): void {
+    if (buf.length !== BRIDGE_FRAME_BYTES || !isPlausibleBridgeFrame(buf, 0)) {
+      return;
+    }
+
+    this.lastFrameMsbyUser.set(userId, Date.now());
+    const sessionId = this.activeSessionByUser.get(userId);
+    if (!sessionId) {
+      if (!this.discardBinaryNoSessionWarnedUserIds.has(userId)) {
+        this.discardBinaryNoSessionWarnedUserIds.add(userId);
+        this.logger.warn(
+          `Bridge EEG binary discarded (no Kafka session binding for user=${userId}). Call POST bridge/control/session before streaming.`,
+        );
+      }
+      return;
+    }
+
+    const timestamp = Number(buf.readBigInt64LE(0));
+    const ch1 = buf.readFloatLE(12);
+    const ch2 = buf.readFloatLE(16);
+    const ch3 = buf.readFloatLE(20);
+    const ch4 = buf.readFloatLE(24);
+    const ch5 = buf.readFloatLE(28);
+    const ch6 = buf.readFloatLE(32);
+    const ch7 = buf.readFloatLE(36);
+    const ch8 = buf.readFloatLE(40);
+
+    const marker = this.pendingMarkerByUser.get(userId);
+    const payload =
+      marker !== undefined
+        ? { timestamp, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, marker }
+        : { timestamp, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8 };
+
+    if (marker !== undefined) {
+      this.pendingMarkerByUser.delete(userId);
+    }
+
+    this.eegStreamService.sendEegSample(userId, sessionId, payload);
   }
 
   private extractBearer(request: IncomingMessage): string | null {

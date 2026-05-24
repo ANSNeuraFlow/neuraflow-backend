@@ -13,6 +13,10 @@ export class EegWsAuthGuard implements CanActivate {
     private readonly jweService: JweService,
     private readonly sessionsService: SessionsService,
   ) {}
+
+  // ---------- Walidacja Strumieniowania EEG -------------------------------
+  // Funkcja sprawdza poprawność tokena oraz czy użytkownik ma uprawnienia i aktywną sesję treningową.
+  // ------------------------------------------------------------------------
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client = context.switchToWs().getClient<EegSocket>();
     const token = this.extractToken(client);
@@ -45,6 +49,10 @@ export class EegWsAuthGuard implements CanActivate {
     client.data.user = payload;
     return true;
   }
+
+  // ---------- Ekstrakcja Tokena Połączeniowego ----------------------------
+  // Rozbiera połączenie websocketa wyszukując uwierzytelnienia z nagłówków lub obiketu auth.
+  // ------------------------------------------------------------------------
   private extractToken(client: EegSocket): string | undefined {
     const auth = client.handshake.auth as Record<string, unknown> | undefined;
     const tokenFromAuth = auth?.['token'] as string | undefined;
