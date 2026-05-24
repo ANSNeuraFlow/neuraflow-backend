@@ -9,6 +9,9 @@ import type { AuthenticatedSocket, WsUserPayload } from '../models/ws.model';
 export class WsAuthGuard implements CanActivate {
   constructor(private readonly jweService: JweService) {}
 
+  // ---------- Walidacja Połączenia WebSocket ------------------------------
+  // Funkcja autoryzująca, sprawdzająca poprawność tokena oraz uprawnienia klienta WebSocket.
+  // ------------------------------------------------------------------------
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client = context.switchToWs().getClient<AuthenticatedSocket>();
     const token = this.extractToken(client);
@@ -32,6 +35,9 @@ export class WsAuthGuard implements CanActivate {
     }
   }
 
+  // ---------- Ekstrakcja Tokena Połączeniowego ----------------------------
+  // Funkcja szuka dostarczonego tokena JWT.
+  // ------------------------------------------------------------------------
   private extractToken(client: AuthenticatedSocket): string | undefined {
     const auth = client.handshake.auth as Record<string, unknown> | undefined;
     const tokenFromAuth = auth?.['token'] as string | undefined;
@@ -41,6 +47,9 @@ export class WsAuthGuard implements CanActivate {
     return tokenFromAuth ?? tokenFromHeader ?? tokenFromCookie;
   }
 
+  // ---------- Ekstrakcja Tokena z Ciasteczek ------------------------------
+  // Funkcja rozbija string headerowy Cookies i poszukuje zawartości klucza "access_token".
+  // ------------------------------------------------------------------------
   private extractFromCookie(cookieHeader: string | undefined): string | undefined {
     if (!cookieHeader) return undefined;
     const match = cookieHeader

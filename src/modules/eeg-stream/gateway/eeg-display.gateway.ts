@@ -35,10 +35,16 @@ export class EegDisplayGateway implements OnGatewayInit, OnGatewayConnection, On
   private readonly logger = new Logger(EegDisplayGateway.name);
   private producerSocketId: string | null = null;
 
+  // ---------- Inicjalizacja Bramki Wyświetlania ---------------------------
+  // Funkcja wywoływana jednorazowo przy starcie instancji bramki wyświetlającej dane na żywo (250Hz).
+  // ------------------------------------------------------------------------
   afterInit() {
     this.logger.log('Gateway 250Hz zainicjalizowany na namespace /eeg-display');
   }
 
+  // ---------- Obsługa Połączenia do Wizualizacji --------------------------
+  // Rozdziela klientów na role: "producer" jako główne źródło, "viewer" jako nasłuchujący pokoju.
+  // ------------------------------------------------------------------------
   handleConnection(client: Socket) {
     const role = (client.handshake.query['role'] as string) ?? 'viewer';
 
@@ -51,6 +57,9 @@ export class EegDisplayGateway implements OnGatewayInit, OnGatewayConnection, On
     }
   }
 
+  // ---------- Obsługa Rozłączenia z Wizualizacją --------------------------
+  // Odnotowuje wyjście transmisyjnego urządzenia opaski w przypadku utracenia połączenia.
+  // ------------------------------------------------------------------------
   handleDisconnect(client: Socket) {
     if (client.id === this.producerSocketId) {
       this.producerSocketId = null;
@@ -58,6 +67,9 @@ export class EegDisplayGateway implements OnGatewayInit, OnGatewayConnection, On
     }
   }
 
+  // ---------- Odbiór i Transmisja Skalarna EEG ----------------------------
+  // Punkt przekazujący odebrany sygnał EEG natychmiastowo na wykresy dla widzów w `BROADCAST_ROOM`.
+  // ------------------------------------------------------------------------
   @SubscribeMessage(WS_EVENT.EEG_DISPLAY_DATA)
   handleDisplayData(
     @MessageBody(WsValidationPipe) payload: EegDisplayPayloadDto,

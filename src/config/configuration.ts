@@ -76,13 +76,15 @@ export default (): AppConfig => {
     AUTH_TOKEN_EXPIRATION_HOURS: num({ default: 24 }),
     PROMETHEUS_URL: url({ default: 'http://10.200.40.10:9090' }),
     PROMETHEUS_TIMEOUT_MS: num({ default: 4000 }),
-    KAFKA_BROKERS: str({ default: '10.200.40.10:9092' }),
+    KAFKA_BROKERS: str({
+      default: '10.200.40.11:9092,10.200.40.10:9092',
+    }),
     KAFKA_EEG_TOPIC: str({ default: 'eeg_data' }),
     RAY_HEAD_URL: url({ default: 'http://10.200.40.10:8265' }),
     RAY_SERVE_BASE_URL: url({ default: 'http://10.200.40.10:8000' }),
     RAY_WEBHOOK_SECRET: str(),
     RAY_TRAIN_SCRIPT_PATH: str({ default: '/opt/neuraflow/train.py' }),
-    RAY_WEBHOOK_URL: url({ default: 'http://10.200.40.26:4000/api/v1/internal/webhook/ray' }),
+    RAY_WEBHOOK_URL: url({ default: 'http://10.200.40.29:4000/api/v1/internal/webhook/ray' }),
     FRONTEND_URL: str({ default: 'http://localhost:3000' }),
     RAY_SERVE_SCRIPT_PATH: str({ default: '/opt/neuraflow/serve_model.py' }),
     RAY_SERVE_SCRIPT_DIR: str({ default: '/opt/neuraflow' }),
@@ -113,7 +115,9 @@ export default (): AppConfig => {
       timeoutMs: env.PROMETHEUS_TIMEOUT_MS,
     },
     kafka: {
-      brokers: env.KAFKA_BROKERS.split(','),
+      brokers: env.KAFKA_BROKERS.split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0),
       eegTopic: env.KAFKA_EEG_TOPIC,
     },
     ray: {

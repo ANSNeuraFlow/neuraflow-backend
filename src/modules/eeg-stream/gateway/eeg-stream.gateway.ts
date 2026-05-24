@@ -36,18 +36,30 @@ export class EegStreamGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   constructor(private readonly eegStreamService: EegStreamService) {}
 
+  // ---------- Inicjalizacja Bramki Zrzutu Danych EEG ----------------------
+  // Funkcja wywoływana jednorazowo przy starcie instancji bramki dla strumieniowania danych z urządzeń.
+  // ------------------------------------------------------------------------
   afterInit() {
     this.logger.log('EegStreamGateway initialized');
   }
 
+  // ---------- Obsługa Połączenia Zrzutu Danych ----------------------------
+  // Dziennik logowania autoryzowanych klientów łączących się celem archiwizacji próbek.
+  // ------------------------------------------------------------------------
   handleConnection(client: EegSocket) {
     this.logger.log(`Client connected: ${client.id} (user: ${client.data.user?.email ?? 'unknown'})`);
   }
 
+  // ---------- Obsługa Rozłączenia Ze Zrzutem Danych -----------------------
+  // Dziennik wylogowywania urządzeń w archiwizerze.
+  // ------------------------------------------------------------------------
   handleDisconnect(client: EegSocket) {
     this.logger.log(`Client disconnected: ${client.id} (user: ${client.data.user?.email ?? 'unknown'})`);
   }
 
+  // ---------- Rejestracja Próbki EEG z Wiadomości -------------------------
+  // Funkcja nasłuchuje zdarzenia "WS_EVENT.EEG_DATA", weryfikuje dto payloadu i wysyła do serwisu Kafki/Kafki.
+  // ------------------------------------------------------------------------
   @SubscribeMessage(WS_EVENT.EEG_DATA)
   @UsePipes(WsValidationPipe)
   handleEegData(@MessageBody() payload: EegPayloadDto, @ConnectedSocket() client: EegSocket): void {

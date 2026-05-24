@@ -52,10 +52,9 @@ export class ModelDeploymentService {
     this.startingTimeoutMs = ray.startingTimeoutMs;
   }
 
-  /**
-   * Wdrożenie: zapis w DB, potem deklaratywny PUT na Ray (łącznie z już działającymi apkami).
-   * Status w bazie przechodzi PENDING → STARTING po udanym wywołaniu Ray.
-   */
+  // ---------- Wdrożenie Modelu do Klastra (Deploy) -------------------------
+  // Inicjuje uruchomienie serwisu modelu w klastrze Ray Serve. Zmienia status w bazie z PENDING na STARTING.
+  // ------------------------------------------------------------------------
   async deploy(userId: string, modelId: string): Promise<DeploymentModel> {
     const model = await this.mlModelsRepository.findByIdAndUserId(modelId, userId);
     if (!model) throw new NotFoundHttpException(`Model ${modelId}`);
@@ -64,7 +63,8 @@ export class ModelDeploymentService {
     }
     if (!model.filePath) throw new ForbiddenHttpException(`Model ${modelId} has no file path`);
 
-    // Nie dopuszczamy dwóch aktywnych deploymentów tego samego modelu u jednego użytkownika.
+    // Walidacja optymalizacji: uniemożliwiamy odpalenie więcej niż 1 okna środowiskowego
+    // dla jednego zestawu gry w tym samym czasie oszczędzając drenaż surowców GPU na klastrze ML.
     const alreadyRunning = await this.modelDeploymentRepository.findActiveByModelId(userId, modelId);
     if (alreadyRunning) throw new ResourceConflictHttpException();
 
@@ -98,10 +98,10 @@ export class ModelDeploymentService {
     }
   }
 
-  /**
-   * Zatrzymanie: Ray nie ma sensownego DELETE per aplikacja — wysyłamy PUT z listą „zostaw tylko te”.
-   * Przy błędzie sieci i tak ustawiamy STOPPING; scheduler ponowi usunięcie.
-   */
+  // ---------- Zatrzymanie Modułu Gier (Stop) ------------------------------
+  // Wyrejestrowuje aktywną usługę (aplikację Ray Serve) dedykowaną wskazanemu użytkownikowi,
+  // gasząc silnik.
+  // ------------------------------------------------------------------------
   async stop(userId: string, deploymentId: string): Promise<DeploymentModel> {
     const deployment = await this.modelDeploymentRepository.findByIdAndUserId(deploymentId, userId);
     if (!deployment) throw new NotFoundHttpException(`Deployment ${deploymentId}`);
@@ -113,6 +113,8 @@ export class ModelDeploymentService {
     }
 
     try {
+      // Deklaratywne usunięcie odbywa się tu przez przebudowanie pliku konfiguracyjnego klastra AI
+      // (ponowne przesłanie wszystkich apek, WYKLUCZAJĄC naszą). Skrypt zewnętrzny to chwyta i ubija zrzuconą instancję.
       await this.removeServeApplicationDeclarative(deployment.rayAppName);
     } catch (error) {
       this.logger.warn(
@@ -136,9 +138,10 @@ export class ModelDeploymentService {
     return deployment;
   }
 
-  /**
-   * Cyklicznie (scheduler): dla wierszy STARTING / STOPPING porównujemy stan z Ray i aktualizujemy DB.
-   */
+  // ---------- Automatyczny Syntezator Zmianowych Statusów (Scheduler) -----
+  // Skrypt (Cron) pobierający status wszystkich aplikacji, które zaczynały się wygaszać lub załączać,
+  // dopasowując stan naszej bazy SQL idealnie pod aktualne ramy narzucone przez API klastra Ray Serve.
+  // ------------------------------------------------------------------------
   async syncRayStatuses(): Promise<void> {
     const transitional = await this.modelDeploymentRepository.findAllInTransitionalStatuses();
     if (transitional.length === 0) return;
@@ -160,9 +163,10 @@ export class ModelDeploymentService {
     }
   }
 
-  /**
-   * Dodanie nowej apki bez skasowania pozostałych: GET aktualnej listy, scalenie, jeden PUT z pełnym „desired state”.
-   */
+  // ---------- Dodawanie Nowej Aplikacji z Zachowaniem Reszty ------------
+  // Pobiera listę wszystkich już działających usług (gier) graczy i dopina nasz nowy `newApp`
+  // do głównego strumienia aktualizacji `.put()`. Wynika to z polityki Ray (stan deklaratywny API).
+  // ------------------------------------------------------------------------
   private async putServeApplicationsPreservingOthers(newApp: RayServeAppConfig): Promise<void> {
     const existing = await this.fetchServeApplications();
     const others: RayServeAppConfig[] = [];
@@ -170,7 +174,8 @@ export class ModelDeploymentService {
       const name = entry.deployed_app_config?.name ?? entry.name ?? mapKey;
       if (name === newApp.name) continue;
       const cfg = entry.deployed_app_config;
-      // Bez deployed_app_config nie odtworzymy wpisu w PUT — pomijamy, żeby nie zepsuć reszty (log ostrzega).
+      // Weryfikacja: jeśli cudzy węzeł na Ray nie ma pliku `deployed_app_config` zrywamy całą synchronizację,
+      // by nie zrzucić pomyłkowo aktywnej gry należącej do sąsiedniego połączenia/pacjenta (uszkadzając mu gameplay).
       if (!cfg || typeof cfg.name !== 'string') {
         this.logger.warn(`Skipping Ray app "${name}" without deployed_app_config when merging deploy`);
         continue;
@@ -187,10 +192,10 @@ export class ModelDeploymentService {
     );
   }
 
-  /**
-   * Usunięcie jednej aplikacji: PUT z listą wszystkich *poza* rayAppName.
-   * Brak deployed_app_config u „sąsiada” = nie wiemy jak go zachować — przerywamy, żeby nie zrzucić cudzej apki.
-   */
+  // ---------- Usuwanie Jednej Aplikacji Deklaratywnie ---------------------
+  // Ponownie pobiera wszystkie aplikacje od serwera Ray, ale buduje pakiet `PUT` całkowicie OMIJAJĄC
+  // nazwę naszej instancji (`rayAppName`). Kiedy Ray widzi braki w paczce `remaining`, sam zabija nasz serwis ML.
+  // ------------------------------------------------------------------------
   private async removeServeApplicationDeclarative(rayAppName: string): Promise<void> {
     const existing = await this.fetchServeApplications();
     const remaining: RayServeAppConfig[] = [];
@@ -219,7 +224,10 @@ export class ModelDeploymentService {
     this.logger.log(`Ray Serve: removed "${rayAppName}", ${remaining.length} app(s) remain`);
   }
 
-  /** Surowa mapa aplikacji z dashboardu Raya (port zwykle 8265). */
+  // ---------- Pobieranie Mapy Instancji Głównych --------------------------
+  // Wykonywuje prostego requesta typu GET to natywnego dashboardu ML (zwykle operującego na porcie 8265)
+  // wyrzucając czysty słownik z aktywnymi środowiskami dla gier z podglądu klastra.
+  // ------------------------------------------------------------------------
   private async fetchServeApplications(): Promise<Record<string, RayServeApplicationEntry>> {
     const response = await firstValueFrom(
       this.httpService.get<{ applications?: Record<string, RayServeApplicationEntry> }>(
@@ -229,9 +237,10 @@ export class ModelDeploymentService {
     return response.data.applications ?? {};
   }
 
-  /**
-   * Wyszukanie wpisu po nazwie: najpierw klucz w obiekcie (często == name), potem pola w środku wpisu.
-   */
+  // ---------- Twardo Mapujący Detektyw Wpisów (Finder) --------------------
+  // Ze względu na brudną strukturę JSON od środowiska Ray Serve, przelatuje po kluczach na liście aplikacji
+  // by dogrzebać się faktycznie do naszej konkretnej ubranej w DTO, unikając dziur i odrzutów z serwisu.
+  // ------------------------------------------------------------------------
   private findApplicationEntry(
     applications: Record<string, RayServeApplicationEntry>,
     rayAppName: string | null | undefined,
@@ -247,9 +256,9 @@ export class ModelDeploymentService {
     return undefined;
   }
 
-  /**
-   * Jedna iteracja synchronizacji: dopasowanie statusu DB do tego, co zwraca Ray dla danej aplikacji.
-   */
+  // ---------- Walidator Synchronizacyjny ----------------------------------
+  // Bierze konkretną aplikację i sztywno mierzy jej bazodanowy stan ze statusem odebranym prosto z klastra (RUNNING, STOPPING).
+  // ------------------------------------------------------------------------
   private async reconcileDeployment(
     deployment: DeploymentModel,
     applications: Record<string, RayServeApplicationEntry>,

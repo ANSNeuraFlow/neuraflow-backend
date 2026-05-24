@@ -23,6 +23,9 @@ export class PrometheusService {
     this.timeoutMs = prometheusConfig.timeoutMs;
   }
 
+  // ---------- Wykonywanie Zapytania PromQL --------------------------------
+  // Funkcja komunikuje się z API Prometheusa i wykonuje podane zapytanie w języku PromQL.
+  // ------------------------------------------------------------------------
   async query(promql: string): Promise<PrometheusScalarResult[]> {
     try {
       const response = await firstValueFrom(
@@ -46,6 +49,9 @@ export class PrometheusService {
     }
   }
 
+  // ---------- Wyciąganie Wartości dla Węzła -------------------------------
+  // Funkcja filtruje listę wyników i konwertuje metrykę do liczby dla wskazanego adresu IP.
+  // ------------------------------------------------------------------------
   extractValueForNode(results: PrometheusScalarResult[], nodeAddress: string): number | null {
     const instancePattern = `${nodeAddress}:${NODE_EXPORTER_PORT}`;
     const match = results.find((r) => r.metric['instance'] === instancePattern);

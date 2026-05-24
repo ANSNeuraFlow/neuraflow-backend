@@ -8,6 +8,9 @@ import type { Socket } from 'socket.io';
 export class EegDisplayAuthGuard implements CanActivate {
   constructor(private readonly jweService: JweService) {}
 
+  // ---------- Walidacja Autoryzacji Połączenia ----------------------------
+  // Funkcja sprawdza bilet (token) przy otwieraniu połączenia WebSocket dla podglądu EEG.
+  // ------------------------------------------------------------------------
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client = context.switchToWs().getClient<Socket>();
     const token = this.extractToken(client);
@@ -26,6 +29,9 @@ export class EegDisplayAuthGuard implements CanActivate {
     }
   }
 
+  // ---------- Ekstrakcja Tokena Połączeniowego ----------------------------
+  // Funkcja szuka dostarczonego tokena u klienta podczas negocjacji WebSocketu.
+  // ------------------------------------------------------------------------
   private extractToken(client: Socket): string | undefined {
     const auth = client.handshake.auth as Record<string, unknown> | undefined;
     const tokenFromAuth = auth?.['token'] as string | undefined;
@@ -34,6 +40,9 @@ export class EegDisplayAuthGuard implements CanActivate {
     return tokenFromAuth ?? tokenFromHeader ?? tokenFromCookie;
   }
 
+  // ---------- Ekstrakcja Tokena z Ciasteczek ------------------------------
+  // Funkcja wyłuskuje token JWT zaszyty w nagłówku typu Cookie.
+  // ------------------------------------------------------------------------
   private extractFromCookie(cookieHeader: string | undefined): string | undefined {
     if (!cookieHeader) return undefined;
     const match = cookieHeader
