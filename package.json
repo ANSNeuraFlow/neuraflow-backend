@@ -19,7 +19,6 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/jest/bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:eeg-display-smoke": "node scripts/eeg-display-smoke.mjs",
-    "kafka:synthetic-eeg": "node scripts/kafka-eeg-synthetic-producer.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.build.json --incremental false",
     "typecheck:watch": "tsc --noEmit -p tsconfig.build.json --watch --incremental false",
     "kysely": "kysely",

@@ -76,11 +76,13 @@ export class TrainingJobsService {
 
     const sessionsArg = sessionIds.join(',');
     const rayPayload = {
-      entrypoint: `python ${this.trainScriptPath} --job-id ${job.id} --sessions ${sessionsArg}`,
+      entrypoint: `python ${this.trainScriptPath} --job-id ${job.id} --sessions ${sessionsArg} --user-id ${userId}`,
       runtime_env: {
+        pip: ['pandas>=2.0', 'pyarrow>=14.0', 'mne>=1.6', 'scikit-learn>=1.3', 'joblib>=1.3', 'hdfs>=2.7'],
         env_vars: {
           NEURAFLOW_WEBHOOK_URL: this.webhookUrl,
           RAY_WEBHOOK_SECRET: this.webhookSecret,
+          HDFS_DEFAULT_FS: 'hdfs://neuraflow-master:9000',
         },
       },
       metadata: {

@@ -1,75 +1,62 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional } from 'class-validator';
+import { IsEnum, IsInt, IsNumber, IsOptional } from 'class-validator';
 import { EegMarker } from 'common/enums';
 
 export class EegPayloadDto {
-  @ApiProperty({ example: 1711234567890 })
-  @IsNumber()
-  @Type(() => Number)
-  timestamp!: number;
-
-  @ApiProperty({ example: 0.00123 })
-  @IsNumber({
-    allowNaN: false,
-    allowInfinity: false,
+  @ApiProperty({
+    description: 'LSL / device-side timestamp (seconds, wall-clock or monotonic)',
+    example: 1777455134.32,
   })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Type(() => Number)
+  lsl_ts!: number;
+
+  @ApiProperty({
+    description: 'Backend receive timestamp (Unix seconds)',
+    example: 1777455134.325,
+  })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Type(() => Number)
+  recv_ts!: number;
+
+  @ApiProperty({ example: -33584.23 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Type(() => Number)
   ch1!: number;
 
-  @ApiProperty({ example: 0.00456 })
-  @IsNumber({
-    allowNaN: false,
-    allowInfinity: false,
-  })
+  @ApiProperty({ example: -32945.04 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Type(() => Number)
   ch2!: number;
 
-  @ApiProperty({ example: 0.00789 })
-  @IsNumber({
-    allowNaN: false,
-    allowInfinity: false,
-  })
+  @ApiProperty({ example: -34128.97 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Type(() => Number)
   ch3!: number;
 
-  @ApiProperty({ example: 0.00321 })
-  @IsNumber({
-    allowNaN: false,
-    allowInfinity: false,
-  })
+  @ApiProperty({ example: -33882.36 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Type(() => Number)
   ch4!: number;
 
-  @ApiProperty({ example: 0.00654 })
-  @IsNumber({
-    allowNaN: false,
-    allowInfinity: false,
-  })
+  @ApiProperty({ example: 0.0 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Type(() => Number)
   ch5!: number;
 
-  @ApiProperty({ example: 0.00987 })
-  @IsNumber({
-    allowNaN: false,
-    allowInfinity: false,
-  })
+  @ApiProperty({ example: 0.0 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Type(() => Number)
   ch6!: number;
 
-  @ApiProperty({ example: 0.00111 })
-  @IsNumber({
-    allowNaN: false,
-    allowInfinity: false,
-  })
+  @ApiProperty({ example: 0.0 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Type(() => Number)
   ch7!: number;
 
-  @ApiProperty({ example: 0.00222 })
-  @IsNumber({
-    allowNaN: false,
-    allowInfinity: false,
-  })
+  @ApiProperty({ example: 0.0 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @Type(() => Number)
   ch8!: number;
 
@@ -81,4 +68,13 @@ export class EegPayloadDto {
   @IsOptional()
   @IsEnum(EegMarker)
   marker?: EegMarker;
+
+  @ApiPropertyOptional({
+    description: 'Numer próby w sesji (od 1)',
+    example: 3,
+  })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  trial_index?: number | null;
 }
