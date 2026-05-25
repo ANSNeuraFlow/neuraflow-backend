@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AuthenticatedRequest } from 'common/interfaces';
 import { AuthGuard } from 'modules/auth/auth.guard';
@@ -36,9 +36,16 @@ export class BridgeStreamController {
   }
 
   @Post('session')
-  @ApiOperation({ summary: 'Bind active EEG session for bridge uplink to Kafka' })
+  @ApiOperation({ summary: 'Bind active EEG session for bridge uplink' })
   async setBridgeSession(@Req() req: AuthenticatedRequest, @Body() dto: BridgeSessionDto) {
     await this.bridgeStreamService.setActiveSession(req.user.id, dto.sessionId);
+    return { ok: true };
+  }
+
+  @Delete('session')
+  @ApiOperation({ summary: 'Clear active bridge EEG session binding' })
+  clearBridgeSession(@Req() req: AuthenticatedRequest) {
+    this.bridgeStreamService.clearActiveSession(req.user.id);
     return { ok: true };
   }
 }

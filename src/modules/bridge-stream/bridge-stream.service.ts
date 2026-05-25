@@ -4,8 +4,13 @@ import type { Duplex } from 'node:stream';
 
 import { Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import { EegMarker } from 'common/enums';
 import { BridgeAuthRepository } from 'modules/bridge-auth/repository/bridge-auth.repository';
+import {
+  applyMarkerToState,
+  createEegMarkerState,
+  type EegMarkerState,
+  isClassMarker,
+} from 'modules/eeg-stream/eeg-marker-state.util';
 import { EegStreamService } from 'modules/eeg-stream/eeg-stream.service';
 import { SessionsService } from 'modules/sessions/sessions.service';
 import { RawData, WebSocket, WebSocketServer } from 'ws';
@@ -37,12 +42,6 @@ export interface BridgeControlClientMessage {
   streaming?: boolean;
 }
 
-const EEG_MARKER_VALUES = new Set<string>(Object.values(EegMarker));
-
-function isEegMarker(value: string): value is EegMarker {
-  return EEG_MARKER_VALUES.has(value);
-}
-
 function isPlausibleBridgeFrame(buf: Buffer, off: number): boolean {
   if (off + BRIDGE_FRAME_BYTES > buf.length) {
     return false;
@@ -68,15 +67,11 @@ export class BridgeStreamService implements OnModuleDestroy {
   private readonly socketsByUser = new Map<string, Set<WebSocket>>();
   private readonly streamSocketsByUser = new Map<string, Set<WebSocket>>();
   private readonly activeSessionByUser = new Map<string, string>();
-  private readonly pendingMarkerByUser = new Map<string, EegMarker>();
+  private readonly markerStateByUser = new Map<string, EegMarkerState>();
   private readonly streamingByUser = new Map<string, boolean>();
-  /** Epoch-ms of the last EEG frame forwarded per user — used to infer live streaming state. */
   private readonly lastFrameMsbyUser = new Map<string, number>();
-  /** Warn once per user when EEG frames arrive but no REST session binding yet. */
   private readonly discardBinaryNoSessionWarnedUserIds = new Set<string>();
-  /** Reassemble EEG frames split across WS messages / coalesced by the stack (44 B per sample). */
   private readonly streamBinaryRxBufferBySocket = new Map<WebSocket, Buffer>();
-  /** Throttle resync warnings after misaligned binary uplink. */
   private readonly bridgeStreamResyncLogLastMsByUser = new Map<string, number>();
   private httpServer: Server | null = null;
   private upgradeListener: ((request: IncomingMessage, socket: Duplex, head: Buffer) => void) | null = null;
@@ -178,25 +173,58 @@ export class BridgeStreamService implements OnModuleDestroy {
   }
 
   sendMarkerCommand(userId: string, marker: string): number {
+    let kafkaHandled = 0;
+
+    if (this.activeSessionByUser.has(userId)) {
+      this.applyStickyMarker(userId, marker);
+      kafkaHandled = 1;
+    }
+
     const set = this.socketsByUser.get(userId);
-    if (!set || set.size === 0) {
-      throw new NotFoundException('No bridge connected for this user');
-    }
+    if (set && set.size > 0) {
+      const payload = JSON.stringify({
+        type: 'command',
+        action: 'send_marker',
+        marker,
+      } satisfies BridgeControlServerMessage);
 
-    const payload = JSON.stringify({
-      type: 'command',
-      action: 'send_marker',
-      marker,
-    } satisfies BridgeControlServerMessage);
-
-    let sent = 0;
-    for (const ws of set) {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload);
-        sent++;
+      let sent = 0;
+      for (const ws of set) {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(payload);
+          sent++;
+        }
       }
+      return Math.max(kafkaHandled, sent);
     }
-    return sent;
+
+    if (kafkaHandled > 0) {
+      return kafkaHandled;
+    }
+
+    throw new NotFoundException('No bridge connected for this user');
+  }
+
+  private applyStickyMarker(userId: string, marker: string): void {
+    let state = this.markerStateByUser.get(userId);
+    if (!state) {
+      state = createEegMarkerState();
+      this.markerStateByUser.set(userId, state);
+    }
+
+    const applied = applyMarkerToState(state, marker);
+    if (!applied) {
+      this.logger.debug(`Kafka marker ignored user=${userId} marker=${marker}`);
+      return;
+    }
+
+    this.logger.log(
+      `Kafka marker active user=${userId} marker=${state.activeMarker ?? 'null'} trial=${state.activeTrialIndex ?? 'null'} (cmd=${marker})`,
+    );
+  }
+
+  private clearStickyMarkers(userId: string): void {
+    this.markerStateByUser.delete(userId);
   }
 
   getBridgeStatus(userId: string): {
@@ -212,8 +240,6 @@ export class BridgeStreamService implements OnModuleDestroy {
     const streamConnected =
       !!streamSockets && streamSockets.size > 0 && [...streamSockets].some((ws) => ws.readyState === WebSocket.OPEN);
 
-    // Treat as streaming if the control socket reported streaming OR if EEG frames
-    // arrived within the last 5 s (handles bridge reconnect without re-emitting status).
     const controlReported = this.streamingByUser.get(userId) ?? false;
     const lastFrameMs = this.lastFrameMsbyUser.get(userId) ?? 0;
     const streaming = controlReported || (streamConnected && Date.now() - lastFrameMs < 5_000);
@@ -230,7 +256,7 @@ export class BridgeStreamService implements OnModuleDestroy {
 
   clearActiveSession(userId: string): void {
     this.activeSessionByUser.delete(userId);
-    this.pendingMarkerByUser.delete(userId);
+    this.clearStickyMarkers(userId);
     this.discardBinaryNoSessionWarnedUserIds.delete(userId);
   }
 
@@ -402,14 +428,7 @@ export class BridgeStreamService implements OnModuleDestroy {
       return false;
     }
     if (parsed.type === 'marker' && typeof parsed.marker === 'string') {
-      if (isEegMarker(parsed.marker)) {
-        this.pendingMarkerByUser.set(userId, parsed.marker);
-        this.logger.debug(`Bridge stream marker user=${userId} marker=${parsed.marker}`);
-      } else {
-        this.logger.debug(
-          `Bridge stream marker ignored (not in EegMarker enum) user=${userId} marker=${parsed.marker}`,
-        );
-      }
+      this.applyStickyMarker(userId, parsed.marker);
       return true;
     }
     return false;
@@ -511,7 +530,9 @@ export class BridgeStreamService implements OnModuleDestroy {
       return;
     }
 
-    const timestamp = Number(buf.readBigInt64LE(0));
+    const bridgeMs = Number(buf.readBigInt64LE(0));
+    const lsl_ts = bridgeMs / 1000;
+    const recv_ts = Date.now() / 1000;
     const ch1 = buf.readFloatLE(12);
     const ch2 = buf.readFloatLE(16);
     const ch3 = buf.readFloatLE(20);
@@ -521,15 +542,23 @@ export class BridgeStreamService implements OnModuleDestroy {
     const ch7 = buf.readFloatLE(36);
     const ch8 = buf.readFloatLE(40);
 
-    const marker = this.pendingMarkerByUser.get(userId);
-    const payload =
-      marker !== undefined
-        ? { timestamp, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, marker }
-        : { timestamp, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8 };
-
-    if (marker !== undefined) {
-      this.pendingMarkerByUser.delete(userId);
-    }
+    const markerState = this.markerStateByUser.get(userId);
+    const marker = markerState?.activeMarker ?? null;
+    const trial_index = marker !== null && isClassMarker(marker) ? (markerState?.activeTrialIndex ?? null) : null;
+    const payload = {
+      lsl_ts,
+      recv_ts,
+      ch1,
+      ch2,
+      ch3,
+      ch4,
+      ch5,
+      ch6,
+      ch7,
+      ch8,
+      marker: marker ?? undefined,
+      trial_index,
+    };
 
     this.eegStreamService.sendEegSample(userId, sessionId, payload);
   }

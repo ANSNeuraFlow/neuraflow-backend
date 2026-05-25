@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common'; // Jedno do wywealenia potem
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientKafka } from '@nestjs/microservices';
 import type { EegMarker } from 'common/enums';
@@ -9,7 +9,8 @@ import type { EegPayloadDto } from './dtos/eeg-payload.dto';
 export interface EegKafkaMessage {
   userId: string;
   sessionId: string;
-  timestamp: number;
+  lsl_ts: number;
+  recv_ts: number;
   ch1: number;
   ch2: number;
   ch3: number;
@@ -18,12 +19,13 @@ export interface EegKafkaMessage {
   ch6: number;
   ch7: number;
   ch8: number;
-  marker?: EegMarker;
+  marker: EegMarker | null;
+  trial_index: number | null;
 }
 
 @Injectable()
 export class EegStreamService implements OnModuleInit {
-  private readonly logger = new Logger(EegStreamService.name); // do wywalenia potem
+  private readonly logger = new Logger(EegStreamService.name);
   private readonly eegTopic: string;
   private readonly kafkaBrokersCsv: string;
   private kafkaProducerReady = false;
@@ -38,9 +40,6 @@ export class EegStreamService implements OnModuleInit {
     this.kafkaBrokersCsv = kafka.brokers.join(', ');
   }
 
-  // ---------- Inicjalizacja Połączenia z Kafką ----------------------------
-  // Funkcja wywoływana przy starcie serwisu, nawiązująca połączenie z systemem kolejkowym Apache Kafka.
-  // ------------------------------------------------------------------------
   async onModuleInit(): Promise<void> {
     try {
       await this.kafkaClient.connect();
@@ -55,9 +54,6 @@ export class EegStreamService implements OnModuleInit {
     }
   }
 
-  // ---------- Wysyłanie Próbki EEG do Kolejki -----------------------------
-  // Składa ładunek (payload) z userId i sessionId, a następnie emituje wiadomość we wskazany kanał Kafki.
-  // ------------------------------------------------------------------------
   sendEegSample(userId: string, sessionId: string, payload: EegPayloadDto): void {
     if (!this.kafkaProducerReady) {
       const now = Date.now();
@@ -73,11 +69,22 @@ export class EegStreamService implements OnModuleInit {
     const message: EegKafkaMessage = {
       userId,
       sessionId,
-      ...payload,
+      lsl_ts: payload.lsl_ts,
+      recv_ts: payload.recv_ts,
+      ch1: payload.ch1,
+      ch2: payload.ch2,
+      ch3: payload.ch3,
+      ch4: payload.ch4,
+      ch5: payload.ch5,
+      ch6: payload.ch6,
+      ch7: payload.ch7,
+      ch8: payload.ch8,
+      marker: payload.marker ?? null,
+      trial_index: payload.trial_index ?? null,
     };
 
     this.kafkaClient.emit(this.eegTopic, {
-      key: userId,
+      key: sessionId,
       value: JSON.stringify(message),
     });
   }
