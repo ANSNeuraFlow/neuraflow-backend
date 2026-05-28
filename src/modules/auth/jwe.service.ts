@@ -31,9 +31,9 @@ export class JweService {
     return createSecretKey(Buffer.from(this.secret));
   }
 
-  async issueToken(payload: Record<string, unknown>): Promise<string> {
+  async issueToken(payload: Record<string, unknown>, expiresIn?: string): Promise<string> {
     const key = this.getKey();
-    const expirationTime = this.getExpirationSeconds(this.expiresIn);
+    const expirationTime = this.getExpirationSeconds(expiresIn ?? this.expiresIn);
 
     return new EncryptJWT(payload)
       .setProtectedHeader({ alg: 'dir', enc: 'A256GCM' })
@@ -42,6 +42,18 @@ export class JweService {
       .setAudience(this.audience)
       .setExpirationTime(Math.floor(Date.now() / 1000) + expirationTime)
       .encrypt(key);
+  }
+
+  /** Short-lived token for WebRTC video watch signaling. */
+  async issueWatchToken(userId: string, streamKey: string): Promise<string> {
+    return this.issueToken(
+      {
+        id: userId,
+        streamKey,
+        scope: 'video:watch',
+      },
+      '5m',
+    );
   }
 
   async verifyToken(token: string): Promise<Record<string, unknown>> {

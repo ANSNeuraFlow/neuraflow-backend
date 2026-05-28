@@ -16,6 +16,7 @@ import { AppModule } from './app.module';
 import { ValidationFailedHttpException } from './common/exceptions';
 import { BaseExceptionsFilter } from './common/filters/base-exception.filter';
 import { BridgeStreamService } from './modules/bridge-stream/bridge-stream.service';
+import { VideoStreamService } from './modules/video-stream/video-stream.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -104,5 +105,6 @@ async function bootstrap() {
     logger.log(`Application started at port:${apiPort}`);
   });
   app.get(BridgeStreamService).registerHttpUpgradeHandlers();
+  app.get(VideoStreamService).registerHttpUpgradeHandlers();
 }
 void bootstrap();

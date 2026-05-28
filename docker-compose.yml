@@ -15,9 +15,18 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@db/neuraflow-backend
       API_PORT: 4000
+      VIDEO_STREAM_ENABLED: 'true'
+      RTMP_INGEST_PORT: 1935
+      RTMP_PUBLIC_HOST: 127.0.0.1
+      MEDIASOUP_LISTEN_IP: 0.0.0.0
+      MEDIASOUP_ANNOUNCED_IP: 127.0.0.1
+      WEBRTC_MIN_PORT: 10000
+      WEBRTC_MAX_PORT: 10100
     restart: unless-stopped
     ports:
       - 4000:4000
+      - 1935:1935
+      - 10000-10100:10000-10100/udp
       - 5000:5000
       - 5001:5001
     depends_on:

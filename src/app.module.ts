@@ -20,6 +20,7 @@ import { ModelDeploymentModule } from './modules/model-deployment/model-deployme
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { TrainingJobsModule } from './modules/training-jobs/training-jobs.module';
 import { UsersModule } from './modules/users/users.module';
+import { VideoStreamModule } from './modules/video-stream/video-stream.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { UsersModule } from './modules/users/users.module';
     BridgeAuthModule,
     BridgeDeviceModule,
     BridgeStreamModule,
+    VideoStreamModule,
   ],
   providers: [Logger],
 })

@@ -14,12 +14,25 @@ export interface AppConfig {
   kafka: KafkaConfig;
   ray: RayConfig;
   bridge: BridgeConfig;
+  videoStream: VideoStreamConfig;
 }
 
 export interface BridgeConfig {
   authCodeTtlMinutes: number;
   tokenTtlHours: number;
   allowedClientIds: string[];
+}
+
+export interface VideoStreamConfig {
+  enabled: boolean;
+  rtmpIngestPort: number;
+  localRtmpPort: number;
+  rtmpPublicHost: string;
+  mediasoupListenIp: string;
+  mediasoupAnnouncedIp: string;
+  webrtcMinPort: number;
+  webrtcMaxPort: number;
+  streamIdleTimeoutMs: number;
 }
 
 export interface PrometheusConfig {
@@ -90,7 +103,16 @@ export default (): AppConfig => {
     RAY_SYNC_INTERVAL_MS: num({ default: 5000 }),
     BRIDGE_AUTH_CODE_TTL_MINUTES: num({ default: 2 }),
     BRIDGE_TOKEN_TTL_HOURS: num({ default: 24 }),
-    BRIDGE_ALLOWED_CLIENT_IDS: str({ default: 'cyton_bridge' }),
+    BRIDGE_ALLOWED_CLIENT_IDS: str({ default: 'cyton_bridge,mavlink_bridge' }),
+    VIDEO_STREAM_ENABLED: str({ default: 'true' }),
+    RTMP_INGEST_PORT: port({ default: 1935 }),
+    LOCAL_RTMP_PORT: port({ default: 1936 }),
+    RTMP_PUBLIC_HOST: str({ default: '127.0.0.1' }),
+    MEDIASOUP_LISTEN_IP: str({ default: '0.0.0.0' }),
+    MEDIASOUP_ANNOUNCED_IP: str({ default: '127.0.0.1' }),
+    WEBRTC_MIN_PORT: num({ default: 10000 }),
+    WEBRTC_MAX_PORT: num({ default: 10100 }),
+    VIDEO_STREAM_IDLE_TIMEOUT_MS: num({ default: 300_000 }),
   });
 
   const config: AppConfig = {
@@ -132,6 +154,17 @@ export default (): AppConfig => {
       authCodeTtlMinutes: env.BRIDGE_AUTH_CODE_TTL_MINUTES,
       tokenTtlHours: env.BRIDGE_TOKEN_TTL_HOURS,
       allowedClientIds: env.BRIDGE_ALLOWED_CLIENT_IDS.split(',').map((s) => s.trim()),
+    },
+    videoStream: {
+      enabled: env.VIDEO_STREAM_ENABLED === 'true',
+      rtmpIngestPort: env.RTMP_INGEST_PORT,
+      localRtmpPort: env.LOCAL_RTMP_PORT,
+      rtmpPublicHost: env.RTMP_PUBLIC_HOST,
+      mediasoupListenIp: env.MEDIASOUP_LISTEN_IP,
+      mediasoupAnnouncedIp: env.MEDIASOUP_ANNOUNCED_IP,
+      webrtcMinPort: env.WEBRTC_MIN_PORT,
+      webrtcMaxPort: env.WEBRTC_MAX_PORT,
+      streamIdleTimeoutMs: env.VIDEO_STREAM_IDLE_TIMEOUT_MS,
     },
   };
 

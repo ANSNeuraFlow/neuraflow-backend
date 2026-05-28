@@ -1,6 +1,7 @@
 import type { BridgeAuthCodeTable } from './bridge-auth-code';
 import type { BridgeDeviceTable } from './bridge-device';
 import type { BridgeTokenTable } from './bridge-token';
+import type { DroneVideoStreamTable } from './drone-video-stream';
 import type { EegSessionTable } from './eeg-session';
 import type { MlModelTable } from './ml-model';
 import type { ModelDeploymentTable } from './model-deployment';
@@ -23,4 +24,5 @@ export interface DB {
   bridgeAuthCodes: BridgeAuthCodeTable;
   bridgeTokens: BridgeTokenTable;
   bridgeDevices: BridgeDeviceTable;
+  droneVideoStreams: DroneVideoStreamTable;
 }
