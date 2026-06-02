@@ -7,7 +7,20 @@ export const BCI_CLASS_MARKERS = new Set<string>([
   EegMarker.FEET,
 ]);
 
-export const MARKER_CLEAR = new Set<string>(['IDLE', 'SESSION_START', 'SESSION_ABORTED', 'ABORTED']);
+export const SSVEP_CLASS_MARKERS = new Set<string>([
+  EegMarker.SSVEP_9HZ,
+  EegMarker.SSVEP_11HZ,
+  EegMarker.SSVEP_13HZ,
+  EegMarker.SSVEP_15HZ,
+]);
+
+export const MARKER_CLEAR = new Set<string>([
+  'IDLE',
+  'SESSION_START',
+  'SESSION_ABORTED',
+  'ABORTED',
+  EegMarker.SSVEP_IDLE,
+]);
 
 export const MARKER_SESSION_END = new Set<string>(['SESSION_END']);
 
@@ -40,7 +53,7 @@ export function applyMarkerToState(state: EegMarkerState, marker: string): boole
     return true;
   }
 
-  if (BCI_CLASS_MARKERS.has(marker)) {
+  if (BCI_CLASS_MARKERS.has(marker) || SSVEP_CLASS_MARKERS.has(marker)) {
     state.classTrialCounter += 1;
     state.activeMarker = marker as EegMarker;
     state.activeTrialIndex = state.classTrialCounter;
@@ -57,5 +70,5 @@ export function applyMarkerToState(state: EegMarkerState, marker: string): boole
 }
 
 export function isClassMarker(marker: EegMarker | null): boolean {
-  return marker !== null && BCI_CLASS_MARKERS.has(marker);
+  return marker !== null && (BCI_CLASS_MARKERS.has(marker) || SSVEP_CLASS_MARKERS.has(marker));
 }

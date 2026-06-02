@@ -5,4 +5,9 @@ export enum EegMarker {
   FEET = 'FEET',
   REST = 'REST',
   IDLE = 'IDLE',
+  SSVEP_9HZ = 'SSVEP_9HZ',
+  SSVEP_11HZ = 'SSVEP_11HZ',
+  SSVEP_13HZ = 'SSVEP_13HZ',
+  SSVEP_15HZ = 'SSVEP_15HZ',
+  SSVEP_IDLE = 'SSVEP_IDLE',
 }
